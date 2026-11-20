@@ -1,6 +1,7 @@
 package com.motuslab.service;
 
 import com.motuslab.dao.ExperimentDao;
+import com.motuslab.dao.ExperimentMemberDao;
 import com.motuslab.dao.SimulationTypeDao;
 import com.motuslab.exception.AuthorizationException;
 import com.motuslab.exception.NotFoundException;
@@ -19,14 +20,20 @@ public class ExperimentService {
 
     private final ExperimentDao experimentDao;
     private final SimulationTypeDao simulationTypeDao;
+    private final ExperimentMemberDao experimentMemberDao;
 
     public ExperimentService() {
-        this(new ExperimentDao(), new SimulationTypeDao());
+        this(new ExperimentDao(), new SimulationTypeDao(), new ExperimentMemberDao());
     }
 
-    public ExperimentService(ExperimentDao experimentDao, SimulationTypeDao simulationTypeDao) {
+    public ExperimentService(
+            ExperimentDao experimentDao,
+            SimulationTypeDao simulationTypeDao,
+            ExperimentMemberDao experimentMemberDao
+    ) {
         this.experimentDao = experimentDao;
         this.simulationTypeDao = simulationTypeDao;
+        this.experimentMemberDao = experimentMemberDao;
     }
 
     public List<SimulationType> getAllSimulationTypes() {
@@ -89,7 +96,7 @@ public class ExperimentService {
         Experiment experiment = experimentDao.findById(experimentId)
                 .orElseThrow(() -> new NotFoundException("Deney bulunamadı."));
 
-        requireOwnerOrAdmin(experiment, currentUser);
+        requireEditPermission(experiment, currentUser);
 
         if (updatedValues == null || updatedValues.isEmpty()) {
             throw new ValidationException("Güncellenecek parametre bulunamadı.");
@@ -122,6 +129,16 @@ public class ExperimentService {
     private void requireOwnerOrAdmin(Experiment experiment, User user) {
         if (experiment.getOwnerId() != user.getId() && !user.isAdmin()) {
             throw new AuthorizationException("Bu deney üzerinde işlem yapma yetkiniz yok.");
+        }
+    }
+
+    private void requireEditPermission(Experiment experiment, User user) {
+        if (experiment.getOwnerId() == user.getId() || user.isAdmin()) {
+            return;
+        }
+        String perm = experimentMemberDao.findPermission(experiment.getId(), user.getId()).orElse("NONE");
+        if (!"EDIT".equals(perm)) {
+            throw new AuthorizationException("Bu deneyin parametrelerini düzenleme yetkiniz yok.");
         }
     }
 

@@ -38,6 +38,22 @@ public class UserDao {
         }
     }
 
+    public Optional<User> findByUsername(String username) {
+        String sql = BASE_SELECT + " WHERE LOWER(u.username) = LOWER(?)";
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, username);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? Optional.of(mapRow(rs)) : Optional.empty();
+            }
+        } catch (SQLException e) {
+            throw new DataAccessException("Kullanıcı adı ile sorgulanırken hata oluştu.", e);
+        }
+    }
+
     public Optional<User> findById(int id) {
         String sql = BASE_SELECT + " WHERE u.id = ?";
 
