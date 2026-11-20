@@ -3,12 +3,14 @@ package com.motuslab.ui;
 import atlantafx.base.theme.Styles;
 import com.motuslab.exception.MotusLabException;
 import com.motuslab.model.Experiment;
+import com.motuslab.model.ExperimentMember;
 import com.motuslab.model.ExperimentParameter;
 import com.motuslab.model.RunMetric;
 import com.motuslab.model.RunSample;
 import com.motuslab.model.SimulationRun;
 import com.motuslab.model.SimulationType;
 import com.motuslab.model.User;
+import com.motuslab.service.ExperimentMemberService;
 import com.motuslab.service.ExperimentService;
 import com.motuslab.service.SimulationRunService;
 import javafx.collections.FXCollections;
@@ -53,6 +55,7 @@ public class DashboardView extends BorderPane {
     private final User currentUser;
     private final ExperimentService experimentService;
     private final SimulationRunService simulationRunService;
+    private final ExperimentMemberService memberService;
     private final Runnable onLogout;
 
     private final ListView<Experiment> experimentListView = new ListView<>();
@@ -63,16 +66,19 @@ public class DashboardView extends BorderPane {
 
     private final Map<Integer, TextField> parameterInputs = new LinkedHashMap<>();
     private Experiment selectedExperiment;
+    private String currentPermission = "NONE";
 
     public DashboardView(
             User currentUser,
             ExperimentService experimentService,
             SimulationRunService simulationRunService,
+            ExperimentMemberService memberService,
             Runnable onLogout
     ) {
         this.currentUser = currentUser;
         this.experimentService = experimentService;
         this.simulationRunService = simulationRunService;
+        this.memberService = memberService;
         this.onLogout = onLogout;
 
         initTopBar();
@@ -121,8 +127,14 @@ public class DashboardView extends BorderPane {
                 } else {
                     Label title = new Label(item.getTitle());
                     title.getStyleClass().add(Styles.TEXT_BOLD);
-                    Label type = new Label(item.getSimulationTypeName());
+
+                    String subtitle = item.getSimulationTypeName();
+                    if (item.getOwnerId() != currentUser.getId()) {
+                        subtitle += " • @" + item.getOwnerUsername();
+                    }
+                    Label type = new Label(subtitle);
                     type.getStyleClass().add(Styles.TEXT_MUTED);
+
                     VBox box = new VBox(2, title, type);
                     box.setPadding(new Insets(4, 0, 4, 0));
                     setGraphic(box);
@@ -217,16 +229,30 @@ public class DashboardView extends BorderPane {
         clearFeedback();
 
         if (selectedExperiment == null) {
+            currentPermission = "NONE";
             Label emptyLabel = new Label("Bir deney seçin veya sol menüden yeni bir deney oluşturun.");
             emptyLabel.getStyleClass().add(Styles.TEXT_MUTED);
             detailContainer.getChildren().add(emptyLabel);
             return;
         }
 
+        try {
+            currentPermission = memberService.getEffectivePermission(selectedExperiment);
+        } catch (MotusLabException ex) {
+            currentPermission = "VIEW";
+        }
+
+        boolean isOwner = "OWNER".equals(currentPermission);
+        boolean canEdit = isOwner || "EDIT".equals(currentPermission);
+        boolean canRun = canEdit || "RUN".equals(currentPermission);
+
         Label titleLabel = new Label(selectedExperiment.getTitle());
         titleLabel.getStyleClass().add(Styles.TITLE_2);
 
-        Label simTypeLabel = new Label("Model: " + selectedExperiment.getSimulationTypeName());
+        String metaText = "Model: " + selectedExperiment.getSimulationTypeName()
+                + " • Sahip: @" + selectedExperiment.getOwnerUsername()
+                + " • Yetkiniz: " + currentPermission;
+        Label simTypeLabel = new Label(metaText);
         simTypeLabel.getStyleClass().add(Styles.TEXT_MUTED);
 
         VBox headerBox = new VBox(4, titleLabel, simTypeLabel);
@@ -250,6 +276,7 @@ public class DashboardView extends BorderPane {
                 Label nameLabel = new Label(param.getParameterName() + " (" + param.getUnit() + ")");
                 TextField valueField = new TextField(String.valueOf(param.getValue()));
                 valueField.setPrefWidth(160);
+                valueField.setEditable(canEdit);
 
                 String rangeText = formatRange(param.getMinValue(), param.getMaxValue());
                 Label rangeLabel = new Label(rangeText);
@@ -266,18 +293,31 @@ public class DashboardView extends BorderPane {
             showFeedback(ex.getMessage(), true);
         }
 
-        Button saveParamsButton = new Button("Parametreleri Kaydet");
-        saveParamsButton.setOnAction(e -> handleSaveParameters());
+        HBox actionBar = new HBox(10);
 
-        Button runSimButton = new Button("Simülasyonu Çalıştır");
-        runSimButton.getStyleClass().add(Styles.ACCENT);
-        runSimButton.setOnAction(e -> handleRunSimulation());
+        if (canRun) {
+            Button runSimButton = new Button("Simülasyonu Çalıştır");
+            runSimButton.getStyleClass().add(Styles.ACCENT);
+            runSimButton.setOnAction(e -> handleRunSimulation(canEdit));
+            actionBar.getChildren().add(runSimButton);
+        }
 
-        Button deleteButton = new Button("Deneyi Sil");
-        deleteButton.getStyleClass().add(Styles.DANGER);
-        deleteButton.setOnAction(e -> handleDeleteExperiment());
+        if (canEdit) {
+            Button saveParamsButton = new Button("Parametreleri Kaydet");
+            saveParamsButton.setOnAction(e -> handleSaveParameters());
+            actionBar.getChildren().add(saveParamsButton);
+        }
 
-        HBox actionBar = new HBox(10, runSimButton, saveParamsButton, deleteButton);
+        if (isOwner) {
+            Button shareButton = new Button("Paylaş");
+            shareButton.setOnAction(e -> openShareDialog());
+            actionBar.getChildren().add(shareButton);
+
+            Button deleteButton = new Button("Deneyi Sil");
+            deleteButton.getStyleClass().add(Styles.DANGER);
+            deleteButton.setOnAction(e -> handleDeleteExperiment());
+            actionBar.getChildren().add(deleteButton);
+        }
 
         Label runsHeader = new Label("Çalıştırma Geçmişi");
         runsHeader.getStyleClass().add(Styles.TITLE_4);
@@ -287,8 +327,12 @@ public class DashboardView extends BorderPane {
                 new Separator(),
                 paramsHeader,
                 paramGrid,
-                feedbackLabel,
-                actionBar,
+                feedbackLabel
+        );
+        if (!actionBar.getChildren().isEmpty()) {
+            detailContainer.getChildren().add(actionBar);
+        }
+        detailContainer.getChildren().addAll(
                 new Separator(),
                 runsHeader,
                 runListView,
@@ -296,6 +340,126 @@ public class DashboardView extends BorderPane {
         );
 
         loadRuns(selectedExperiment.getId(), null);
+    }
+
+    private void openShareDialog() {
+        if (selectedExperiment == null) {
+            return;
+        }
+
+        Dialog<Void> dialog = new Dialog<>();
+        dialog.setTitle("Deneyi Paylaş");
+        dialog.setHeaderText(selectedExperiment.getTitle() + " — Üye Yönetimi");
+        dialog.getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
+
+        Label dialogFeedback = new Label();
+        dialogFeedback.setWrapText(true);
+        dialogFeedback.setVisible(false);
+        dialogFeedback.setManaged(false);
+
+        ListView<ExperimentMember> memberListView = new ListView<>();
+        memberListView.setPrefHeight(200);
+
+        Runnable refreshMembers = () -> {
+            try {
+                List<ExperimentMember> members = memberService.getMembers(selectedExperiment.getId());
+                memberListView.setItems(FXCollections.observableArrayList(members));
+            } catch (MotusLabException ex) {
+                dialogFeedback.setText(ex.getMessage());
+                dialogFeedback.getStyleClass().setAll(Styles.DANGER);
+                dialogFeedback.setVisible(true);
+                dialogFeedback.setManaged(true);
+            }
+        };
+
+        memberListView.setCellFactory(lv -> new ListCell<>() {
+            @Override
+            protected void updateItem(ExperimentMember item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                    setGraphic(null);
+                } else {
+                    Label userLabel = new Label("@" + item.getUsername());
+                    userLabel.getStyleClass().add(Styles.TEXT_BOLD);
+
+                    Label permLabel = new Label(item.getPermission());
+                    permLabel.getStyleClass().add(Styles.TEXT_MUTED);
+
+                    Region spacer = new Region();
+                    HBox.setHgrow(spacer, Priority.ALWAYS);
+
+                    Button removeBtn = new Button("Çıkar");
+                    removeBtn.getStyleClass().add(Styles.DANGER);
+                    removeBtn.setOnAction(e -> {
+                        try {
+                            memberService.removeMember(selectedExperiment.getId(), item.getUserId());
+                            dialogFeedback.setText("@" + item.getUsername() + " çıkarıldı.");
+                            dialogFeedback.getStyleClass().setAll(Styles.SUCCESS);
+                            dialogFeedback.setVisible(true);
+                            dialogFeedback.setManaged(true);
+                            refreshMembers.run();
+                        } catch (MotusLabException ex) {
+                            dialogFeedback.setText(ex.getMessage());
+                            dialogFeedback.getStyleClass().setAll(Styles.DANGER);
+                            dialogFeedback.setVisible(true);
+                            dialogFeedback.setManaged(true);
+                        }
+                    });
+
+                    HBox row = new HBox(10, userLabel, permLabel, spacer, removeBtn);
+                    row.setAlignment(Pos.CENTER_LEFT);
+                    setGraphic(row);
+                }
+            }
+        });
+
+        TextField usernameField = new TextField();
+        usernameField.setPromptText("Kullanıcı adı");
+        HBox.setHgrow(usernameField, Priority.ALWAYS);
+
+        ComboBox<String> permBox = new ComboBox<>(FXCollections.observableArrayList("VIEW", "RUN", "EDIT"));
+        permBox.getSelectionModel().select("VIEW");
+
+        Button addBtn = new Button("Ekle / Güncelle");
+        addBtn.getStyleClass().add(Styles.ACCENT);
+        addBtn.setOnAction(e -> {
+            try {
+                memberService.addOrUpdateMember(
+                        selectedExperiment.getId(),
+                        usernameField.getText(),
+                        permBox.getValue()
+                );
+                usernameField.clear();
+                dialogFeedback.setText("Üye yetkisi kaydedildi.");
+                dialogFeedback.getStyleClass().setAll(Styles.SUCCESS);
+                dialogFeedback.setVisible(true);
+                dialogFeedback.setManaged(true);
+                refreshMembers.run();
+            } catch (MotusLabException ex) {
+                dialogFeedback.setText(ex.getMessage());
+                dialogFeedback.getStyleClass().setAll(Styles.DANGER);
+                dialogFeedback.setVisible(true);
+                dialogFeedback.setManaged(true);
+            }
+        });
+
+        HBox addRow = new HBox(8, usernameField, permBox, addBtn);
+        addRow.setAlignment(Pos.CENTER_LEFT);
+
+        VBox content = new VBox(12,
+                new Label("Yeni Üye Ekle veya Yetki Güncelle"),
+                addRow,
+                dialogFeedback,
+                new Separator(),
+                new Label("Mevcut Üyeler"),
+                memberListView
+        );
+        content.setPrefWidth(460);
+        dialog.getDialogPane().setContent(content);
+
+        refreshMembers.run();
+        dialog.showAndWait();
     }
 
     private void loadRuns(int experimentId, Integer selectRunId) {
@@ -318,11 +482,11 @@ public class DashboardView extends BorderPane {
         }
     }
 
-    private void handleRunSimulation() {
+    private void handleRunSimulation(boolean canEdit) {
         if (selectedExperiment == null) {
             return;
         }
-        if (!saveParametersSilently()) {
+        if (canEdit && !saveParametersSilently()) {
             return;
         }
 
@@ -514,7 +678,7 @@ public class DashboardView extends BorderPane {
         Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
         confirm.setTitle("Deneyi Sil");
         confirm.setHeaderText(selectedExperiment.getTitle());
-        confirm.setContentText("Bu deney ve tüm parametreleri kalıcı olarak silinecek. Emin misiniz?");
+        confirm.setContentText("Bu deney ve tüm çalıştırma geçmişi kalıcı olarak silinecek. Emin misiniz?");
 
         confirm.showAndWait().ifPresent(result -> {
             if (result == ButtonType.OK) {
