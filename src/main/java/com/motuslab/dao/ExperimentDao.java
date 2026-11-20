@@ -200,13 +200,29 @@ public class ExperimentDao {
     }
 
     public void delete(int experimentId) {
-        String sql = "DELETE FROM experiments WHERE id = ?";
+        String deleteParamsSql = "DELETE FROM experiment_parameters WHERE experiment_id = ?";
+        String deleteExpSql = "DELETE FROM experiments WHERE id = ?";
 
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+        try (Connection conn = DatabaseConnection.getConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                try (PreparedStatement ps = conn.prepareStatement(deleteParamsSql)) {
+                    ps.setInt(1, experimentId);
+                    ps.executeUpdate();
+                }
 
-            ps.setInt(1, experimentId);
-            ps.executeUpdate();
+                try (PreparedStatement ps = conn.prepareStatement(deleteExpSql)) {
+                    ps.setInt(1, experimentId);
+                    ps.executeUpdate();
+                }
+
+                conn.commit();
+            } catch (SQLException e) {
+                conn.rollback();
+                throw e;
+            } finally {
+                conn.setAutoCommit(true);
+            }
         } catch (SQLException e) {
             throw new DataAccessException("Deney silinirken hata oluştu.", e);
         }
