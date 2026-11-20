@@ -1,40 +1,55 @@
 package com.motuslab;
 
 import atlantafx.base.theme.PrimerLight;
-import com.motuslab.config.DatabaseConnection;
+import atlantafx.base.theme.Styles;
+import com.motuslab.model.User;
+import com.motuslab.service.AuthService;
+import com.motuslab.ui.AuthView;
 import javafx.application.Application;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
+import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
 public class MainApp extends Application {
 
+    private final AuthService authService = new AuthService();
+    private Stage primaryStage;
+
     @Override
     public void start(Stage stage) {
+        this.primaryStage = stage;
         Application.setUserAgentStylesheet(new PrimerLight().getUserAgentStylesheet());
 
-        boolean connected = DatabaseConnection.testConnection();
+        primaryStage.setTitle("MotusLab");
+        showAuthView();
+        primaryStage.show();
+    }
 
-        Label titleLabel = new Label("MotusLab");
-        titleLabel.setStyle("-fx-font-size: 24px; -fx-font-weight: bold;");
+    private void showAuthView() {
+        AuthView authView = new AuthView(authService, this::showHomePlaceholder);
+        primaryStage.setScene(new Scene(authView, 480, 520));
+    }
 
-        Label statusLabel = new Label(
-                connected ? "PostgreSQL Bağlantısı: Başarılı" : "PostgreSQL Bağlantısı: Başarısız"
-        );
-        statusLabel.setStyle(
-                connected ? "-fx-text-fill: #1a7f37; -fx-font-size: 14px;"
-                        : "-fx-text-fill: #cf222e; -fx-font-size: 14px;"
-        );
+    private void showHomePlaceholder(User user) {
+        Label welcomeLabel = new Label("Hoş geldin, " + user.getUsername());
+        welcomeLabel.getStyleClass().add(Styles.TITLE_2);
 
-        VBox root = new VBox(12, titleLabel, statusLabel);
+        Label roleLabel = new Label("Rol: " + user.getRoleName());
+        roleLabel.getStyleClass().add(Styles.TEXT_MUTED);
+
+        Button logoutButton = new Button("Çıkış Yap");
+        logoutButton.setOnAction(e -> {
+            authService.logout();
+            showAuthView();
+        });
+
+        VBox root = new VBox(12, welcomeLabel, roleLabel, logoutButton);
         root.setAlignment(Pos.CENTER);
 
-        Scene scene = new Scene(root, 480, 260);
-        stage.setTitle("MotusLab — Sistem Testi");
-        stage.setScene(scene);
-        stage.show();
+        primaryStage.setScene(new Scene(root, 640, 420));
     }
 
     public static void main(String[] args) {
