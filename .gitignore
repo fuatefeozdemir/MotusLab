@@ -1,5 +1,6 @@
 # Veritabanı yapılandırması (şifreler)
 config/database.properties
+src/main/resources/config.properties
 
 # Maven
 target/
