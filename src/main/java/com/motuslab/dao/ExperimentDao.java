@@ -200,12 +200,24 @@ public class ExperimentDao {
     }
 
     public void delete(int experimentId) {
+        String deleteRunsSql = "DELETE FROM simulation_runs WHERE experiment_id = ?";
+        String deleteMembersSql = "DELETE FROM experiment_members WHERE experiment_id = ?";
         String deleteParamsSql = "DELETE FROM experiment_parameters WHERE experiment_id = ?";
         String deleteExpSql = "DELETE FROM experiments WHERE id = ?";
 
         try (Connection conn = DatabaseConnection.getConnection()) {
             conn.setAutoCommit(false);
             try {
+                try (PreparedStatement ps = conn.prepareStatement(deleteRunsSql)) {
+                    ps.setInt(1, experimentId);
+                    ps.executeUpdate();
+                }
+
+                try (PreparedStatement ps = conn.prepareStatement(deleteMembersSql)) {
+                    ps.setInt(1, experimentId);
+                    ps.executeUpdate();
+                }
+
                 try (PreparedStatement ps = conn.prepareStatement(deleteParamsSql)) {
                     ps.setInt(1, experimentId);
                     ps.executeUpdate();
