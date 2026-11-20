@@ -76,8 +76,8 @@ public class ExperimentDao {
                 RETURNING id, created_at, updated_at
                 """;
         String insertParamSql = """
-                INSERT INTO experiment_parameters (experiment_id, parameter_definition_id, value)
-                VALUES (?, ?, ?)
+                INSERT INTO experiment_parameters (experiment_id, simulation_type_id, parameter_definition_id, value)
+                VALUES (?, ?, ?, ?)
                 """;
 
         try (Connection conn = DatabaseConnection.getConnection()) {
@@ -102,8 +102,9 @@ public class ExperimentDao {
                 try (PreparedStatement ps = conn.prepareStatement(insertParamSql)) {
                     for (Map.Entry<Integer, Double> entry : parameterValues.entrySet()) {
                         ps.setInt(1, experiment.getId());
-                        ps.setInt(2, entry.getKey());
-                        ps.setDouble(3, entry.getValue());
+                        ps.setInt(2, experiment.getSimulationTypeId());
+                        ps.setInt(3, entry.getKey());
+                        ps.setDouble(4, entry.getValue());
                         ps.addBatch();
                     }
                     ps.executeBatch();
@@ -158,10 +159,10 @@ public class ExperimentDao {
         }
     }
 
-    public void updateParameters(int experimentId, Map<Integer, Double> parameterValues) {
+    public void updateParameters(int experimentId, int simulationTypeId, Map<Integer, Double> parameterValues) {
         String upsertSql = """
-                INSERT INTO experiment_parameters (experiment_id, parameter_definition_id, value)
-                VALUES (?, ?, ?)
+                INSERT INTO experiment_parameters (experiment_id, simulation_type_id, parameter_definition_id, value)
+                VALUES (?, ?, ?, ?)
                 ON CONFLICT (experiment_id, parameter_definition_id)
                 DO UPDATE SET value = EXCLUDED.value
                 """;
@@ -173,8 +174,9 @@ public class ExperimentDao {
                 try (PreparedStatement ps = conn.prepareStatement(upsertSql)) {
                     for (Map.Entry<Integer, Double> entry : parameterValues.entrySet()) {
                         ps.setInt(1, experimentId);
-                        ps.setInt(2, entry.getKey());
-                        ps.setDouble(3, entry.getValue());
+                        ps.setInt(2, simulationTypeId);
+                        ps.setInt(3, entry.getKey());
+                        ps.setDouble(4, entry.getValue());
                         ps.addBatch();
                     }
                     ps.executeBatch();

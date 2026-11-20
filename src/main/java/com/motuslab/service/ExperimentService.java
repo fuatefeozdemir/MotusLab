@@ -107,7 +107,7 @@ public class ExperimentService {
             validatedValues.put(def.getId(), val);
         }
 
-        experimentDao.updateParameters(experimentId, validatedValues);
+        experimentDao.updateParameters(experimentId, experiment.getSimulationTypeId(), validatedValues);
     }
 
     public void deleteExperiment(int experimentId) {
