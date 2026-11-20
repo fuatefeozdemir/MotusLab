@@ -4,6 +4,7 @@ import atlantafx.base.theme.PrimerLight;
 import com.motuslab.model.User;
 import com.motuslab.service.AuthService;
 import com.motuslab.service.ExperimentService;
+import com.motuslab.service.SimulationRunService;
 import com.motuslab.ui.AuthView;
 import com.motuslab.ui.DashboardView;
 import javafx.application.Application;
@@ -14,6 +15,7 @@ public class MainApp extends Application {
 
     private final AuthService authService = new AuthService();
     private final ExperimentService experimentService = new ExperimentService();
+    private final SimulationRunService simulationRunService = new SimulationRunService();
     private Stage primaryStage;
 
     @Override
@@ -32,11 +34,11 @@ public class MainApp extends Application {
     }
 
     private void showDashboard(User user) {
-        DashboardView dashboardView = new DashboardView(user, experimentService, () -> {
+        DashboardView dashboardView = new DashboardView(user, experimentService, simulationRunService, () -> {
             authService.logout();
             showAuthView();
         });
-        primaryStage.setScene(new Scene(dashboardView, 960, 620));
+        primaryStage.setScene(new Scene(dashboardView, 1180, 760));
     }
 
     public static void main(String[] args) {

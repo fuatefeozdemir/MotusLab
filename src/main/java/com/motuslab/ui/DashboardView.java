@@ -4,12 +4,19 @@ import atlantafx.base.theme.Styles;
 import com.motuslab.exception.MotusLabException;
 import com.motuslab.model.Experiment;
 import com.motuslab.model.ExperimentParameter;
+import com.motuslab.model.RunMetric;
+import com.motuslab.model.RunSample;
+import com.motuslab.model.SimulationRun;
 import com.motuslab.model.SimulationType;
 import com.motuslab.model.User;
 import com.motuslab.service.ExperimentService;
+import com.motuslab.service.SimulationRunService;
 import javafx.collections.FXCollections;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.chart.LineChart;
+import javafx.scene.chart.NumberAxis;
+import javafx.scene.chart.XYChart;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonBar;
@@ -24,32 +31,48 @@ import javafx.scene.control.Separator;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 public class DashboardView extends BorderPane {
 
+    private static final int MAX_CHART_POINTS = 500;
+    private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss");
+
     private final User currentUser;
     private final ExperimentService experimentService;
+    private final SimulationRunService simulationRunService;
     private final Runnable onLogout;
 
     private final ListView<Experiment> experimentListView = new ListView<>();
+    private final ListView<SimulationRun> runListView = new ListView<>();
     private final VBox detailContainer = new VBox(16);
+    private final VBox runResultContainer = new VBox(14);
     private final Label feedbackLabel = new Label();
 
     private final Map<Integer, TextField> parameterInputs = new LinkedHashMap<>();
     private Experiment selectedExperiment;
 
-    public DashboardView(User currentUser, ExperimentService experimentService, Runnable onLogout) {
+    public DashboardView(
+            User currentUser,
+            ExperimentService experimentService,
+            SimulationRunService simulationRunService,
+            Runnable onLogout
+    ) {
         this.currentUser = currentUser;
         this.experimentService = experimentService;
+        this.simulationRunService = simulationRunService;
         this.onLogout = onLogout;
 
         initTopBar();
@@ -129,6 +152,36 @@ public class DashboardView extends BorderPane {
         feedbackLabel.setVisible(false);
         feedbackLabel.setManaged(false);
 
+        runListView.setPrefHeight(160);
+        runListView.setCellFactory(lv -> new ListCell<>() {
+            @Override
+            protected void updateItem(SimulationRun item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                    setGraphic(null);
+                } else {
+                    String time = item.getCreatedAt() != null ? item.getCreatedAt().format(DATE_FMT) : "-";
+                    Label top = new Label("Run #" + item.getId() + " — " + item.getStatus());
+                    top.getStyleClass().add(Styles.TEXT_BOLD);
+                    if ("FAILED".equals(item.getStatus())) {
+                        top.getStyleClass().add(Styles.DANGER);
+                    } else if ("COMPLETED".equals(item.getStatus())) {
+                        top.getStyleClass().add(Styles.SUCCESS);
+                    }
+                    Label sub = new Label(time + " • " + item.getTriggeredByUsername());
+                    sub.getStyleClass().add(Styles.TEXT_MUTED);
+                    VBox box = new VBox(2, top, sub);
+                    box.setPadding(new Insets(2, 0, 2, 0));
+                    setGraphic(box);
+                }
+            }
+        });
+
+        runListView.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> {
+            renderRunResults(newVal);
+        });
+
         ScrollPane scrollPane = new ScrollPane(detailContainer);
         scrollPane.setFitToWidth(true);
         scrollPane.setStyle("-fx-background-color: transparent;");
@@ -159,6 +212,7 @@ public class DashboardView extends BorderPane {
 
     private void renderExperimentDetails() {
         detailContainer.getChildren().clear();
+        runResultContainer.getChildren().clear();
         parameterInputs.clear();
         clearFeedback();
 
@@ -213,14 +267,20 @@ public class DashboardView extends BorderPane {
         }
 
         Button saveParamsButton = new Button("Parametreleri Kaydet");
-        saveParamsButton.getStyleClass().add(Styles.ACCENT);
         saveParamsButton.setOnAction(e -> handleSaveParameters());
+
+        Button runSimButton = new Button("Simülasyonu Çalıştır");
+        runSimButton.getStyleClass().add(Styles.ACCENT);
+        runSimButton.setOnAction(e -> handleRunSimulation());
 
         Button deleteButton = new Button("Deneyi Sil");
         deleteButton.getStyleClass().add(Styles.DANGER);
         deleteButton.setOnAction(e -> handleDeleteExperiment());
 
-        HBox actionBar = new HBox(10, saveParamsButton, deleteButton);
+        HBox actionBar = new HBox(10, runSimButton, saveParamsButton, deleteButton);
+
+        Label runsHeader = new Label("Çalıştırma Geçmişi");
+        runsHeader.getStyleClass().add(Styles.TITLE_4);
 
         detailContainer.getChildren().addAll(
                 headerBox,
@@ -228,13 +288,204 @@ public class DashboardView extends BorderPane {
                 paramsHeader,
                 paramGrid,
                 feedbackLabel,
-                actionBar
+                actionBar,
+                new Separator(),
+                runsHeader,
+                runListView,
+                runResultContainer
         );
+
+        loadRuns(selectedExperiment.getId(), null);
+    }
+
+    private void loadRuns(int experimentId, Integer selectRunId) {
+        try {
+            List<SimulationRun> runs = simulationRunService.getRunsByExperiment(experimentId);
+            runListView.setItems(FXCollections.observableArrayList(runs));
+
+            if (selectRunId != null) {
+                runs.stream()
+                        .filter(r -> r.getId() == selectRunId)
+                        .findFirst()
+                        .ifPresent(r -> runListView.getSelectionModel().select(r));
+            } else if (!runs.isEmpty()) {
+                runListView.getSelectionModel().selectFirst();
+            } else {
+                renderRunResults(null);
+            }
+        } catch (MotusLabException ex) {
+            showFeedback(ex.getMessage(), true);
+        }
+    }
+
+    private void handleRunSimulation() {
+        if (selectedExperiment == null) {
+            return;
+        }
+        if (!saveParametersSilently()) {
+            return;
+        }
+
+        try {
+            SimulationRun run = simulationRunService.executeExperiment(selectedExperiment.getId());
+            showFeedback("Simülasyon tamamlandı (Run #" + run.getId() + ").", false);
+            loadRuns(selectedExperiment.getId(), run.getId());
+        } catch (MotusLabException ex) {
+            showFeedback(ex.getMessage(), true);
+            loadRuns(selectedExperiment.getId(), null);
+        }
+    }
+
+    private void renderRunResults(SimulationRun run) {
+        runResultContainer.getChildren().clear();
+
+        if (run == null) {
+            Label empty = new Label("Henüz bir çalıştırma kaydı yok.");
+            empty.getStyleClass().add(Styles.TEXT_MUTED);
+            runResultContainer.getChildren().add(empty);
+            return;
+        }
+
+        if ("FAILED".equals(run.getStatus())) {
+            Label errLabel = new Label("Çalıştırma başarısız oldu: " +
+                    (run.getErrorMessage() != null ? run.getErrorMessage() : "Bilinmeyen hata"));
+            errLabel.getStyleClass().add(Styles.DANGER);
+            errLabel.setWrapText(true);
+            runResultContainer.getChildren().add(errLabel);
+            return;
+        }
+
+        if (!"COMPLETED".equals(run.getStatus())) {
+            Label statusLabel = new Label("Durum: " + run.getStatus());
+            statusLabel.getStyleClass().add(Styles.TEXT_MUTED);
+            runResultContainer.getChildren().add(statusLabel);
+            return;
+        }
+
+        try {
+            List<RunMetric> metrics = simulationRunService.getMetricsByRun(run.getId());
+            List<RunSample> samples = simulationRunService.getSamplesByRun(run.getId());
+
+            Label metricsTitle = new Label("Sonuç Metrikleri (Run #" + run.getId() + ")");
+            metricsTitle.getStyleClass().add(Styles.TITLE_4);
+
+            FlowPane metricsPane = new FlowPane(12, 12);
+            for (RunMetric m : metrics) {
+                VBox card = new VBox(4);
+                card.setPadding(new Insets(10, 14, 10, 14));
+                card.setStyle("-fx-border-color: -color-border-default; -fx-border-radius: 6; -fx-background-radius: 6;");
+
+                Label name = new Label(formatMetricName(m.getMetricCode()));
+                name.getStyleClass().add(Styles.TEXT_MUTED);
+
+                Label val = new Label(String.format(Locale.US, "%.3f %s", m.getMetricValue(), m.getUnit()));
+                val.getStyleClass().add(Styles.TITLE_4);
+
+                card.getChildren().addAll(name, val);
+                metricsPane.getChildren().add(card);
+            }
+
+            List<RunSample> sampled = downsample(samples, MAX_CHART_POINTS);
+            boolean is2D = selectedExperiment != null && "PROJECTILE_2D".equals(selectedExperiment.getSimulationTypeCode());
+
+            HBox chartsBox = new HBox(16);
+            if (is2D) {
+                LineChart<Number, Number> trajectoryChart = buildChart(
+                        "Yörünge (y - x)", "Konum x (m)", "Yükseklik y (m)", sampled,
+                        RunSample::getPositionX, s -> s.getPositionY() != null ? s.getPositionY() : 0.0
+                );
+                LineChart<Number, Number> speedChart = buildChart(
+                        "Hız Büyüklüğü - Zaman", "Zaman (s)", "Hız (m/s)", sampled,
+                        RunSample::getTimeSeconds, s -> Math.hypot(s.getVelocityX(), s.getVelocityY() != null ? s.getVelocityY() : 0.0)
+                );
+                HBox.setHgrow(trajectoryChart, Priority.ALWAYS);
+                HBox.setHgrow(speedChart, Priority.ALWAYS);
+                chartsBox.getChildren().addAll(trajectoryChart, speedChart);
+            } else {
+                LineChart<Number, Number> posChart = buildChart(
+                        "Konum - Zaman", "Zaman (s)", "Konum x (m)", sampled,
+                        RunSample::getTimeSeconds, RunSample::getPositionX
+                );
+                LineChart<Number, Number> velChart = buildChart(
+                        "Hız - Zaman", "Zaman (s)", "Hız vx (m/s)", sampled,
+                        RunSample::getTimeSeconds, RunSample::getVelocityX
+                );
+                HBox.setHgrow(posChart, Priority.ALWAYS);
+                HBox.setHgrow(velChart, Priority.ALWAYS);
+                chartsBox.getChildren().addAll(posChart, velChart);
+            }
+
+            runResultContainer.getChildren().addAll(metricsTitle, metricsPane, chartsBox);
+        } catch (MotusLabException ex) {
+            showFeedback(ex.getMessage(), true);
+        }
+    }
+
+    private LineChart<Number, Number> buildChart(
+            String title,
+            String xLabel,
+            String yLabel,
+            List<RunSample> samples,
+            java.util.function.ToDoubleFunction<RunSample> xMapper,
+            java.util.function.ToDoubleFunction<RunSample> yMapper
+    ) {
+        NumberAxis xAxis = new NumberAxis();
+        xAxis.setLabel(xLabel);
+        NumberAxis yAxis = new NumberAxis();
+        yAxis.setLabel(yLabel);
+
+        LineChart<Number, Number> chart = new LineChart<>(xAxis, yAxis);
+        chart.setTitle(title);
+        chart.setLegendVisible(false);
+        chart.setCreateSymbols(false);
+        chart.setAnimated(false);
+        chart.setPrefHeight(280);
+
+        XYChart.Series<Number, Number> series = new XYChart.Series<>();
+        for (RunSample s : samples) {
+            series.getData().add(new XYChart.Data<>(xMapper.applyAsDouble(s), yMapper.applyAsDouble(s)));
+        }
+        chart.getData().add(series);
+        return chart;
+    }
+
+    private List<RunSample> downsample(List<RunSample> samples, int maxPoints) {
+        if (samples.size() <= maxPoints) {
+            return samples;
+        }
+        List<RunSample> result = new ArrayList<>(maxPoints);
+        double step = (double) (samples.size() - 1) / (maxPoints - 1);
+        for (int i = 0; i < maxPoints; i++) {
+            int idx = (int) Math.round(i * step);
+            result.add(samples.get(Math.min(idx, samples.size() - 1)));
+        }
+        return result;
+    }
+
+    private String formatMetricName(String code) {
+        return switch (code) {
+            case "total_time" -> "Toplam Süre";
+            case "flight_time" -> "Uçuş Süresi";
+            case "final_position" -> "Son Konum";
+            case "displacement" -> "Yer Değiştirme";
+            case "range" -> "Menzil";
+            case "max_height" -> "Maks. Yükseklik";
+            case "final_velocity" -> "Son Hız";
+            case "impact_speed" -> "Çarpma Hızı";
+            case "max_speed" -> "Maks. Hız";
+            default -> code;
+        };
     }
 
     private void handleSaveParameters() {
+        if (saveParametersSilently()) {
+            showFeedback("Parametreler kaydedildi.", false);
+        }
+    }
+
+    private boolean saveParametersSilently() {
         if (selectedExperiment == null) {
-            return;
+            return false;
         }
         clearFeedback();
 
@@ -245,11 +496,13 @@ public class DashboardView extends BorderPane {
                 updatedValues.put(entry.getKey(), Double.parseDouble(raw));
             }
             experimentService.updateExperimentParameters(selectedExperiment.getId(), updatedValues);
-            showFeedback("Parametreler kaydedildi.", false);
+            return true;
         } catch (NumberFormatException ex) {
             showFeedback("Tüm parametreler geçerli bir sayı olmalıdır.", true);
+            return false;
         } catch (MotusLabException ex) {
             showFeedback(ex.getMessage(), true);
+            return false;
         }
     }
 
