@@ -1,0 +1,26 @@
+# Veritabanı yapılandırması (şifreler)
+config/database.properties
+
+# Maven
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+
+# Java
+*.class
+*.log
+hs_err_pid*
+
+# İşletim Sistemi (macOS & Windows)
+.DS_Store
+Thumbs.db
