@@ -153,4 +153,29 @@ public class ExperimentService {
             throw new ValidationException(def.getName() + " en fazla " + def.getMaxValue() + " " + def.getUnit() + " olabilir.");
         }
     }
+
+    public void updateExperimentDetails(int experimentId, String title, String description) {
+        User currentUser = SessionManager.requireCurrentUser();
+        Experiment experiment = experimentDao.findById(experimentId)
+                .orElseThrow(() -> new NotFoundException("Deney bulunamadı."));
+
+        boolean canEdit = currentUser.isAdmin()
+                || experiment.getOwnerId() == currentUser.getId()
+                || "EDIT".equals(experimentMemberDao.findPermission(experimentId, currentUser.getId()).orElse("NONE"));
+
+        if (!canEdit) {
+            throw new AuthorizationException("Bu deneyi düzenleme yetkiniz yok.");
+        }
+
+        String cleanTitle = title == null ? "" : title.trim();
+        if (cleanTitle.isEmpty()) {
+            throw new ValidationException("Deney başlığı boş olamaz.");
+        }
+        if (cleanTitle.length() > 150) {
+            throw new ValidationException("Deney başlığı en fazla 150 karakter olabilir.");
+        }
+
+        String cleanDesc = (description == null || description.isBlank()) ? null : description.trim();
+        experimentDao.updateDetails(experimentId, cleanTitle, cleanDesc);
+    }
 }

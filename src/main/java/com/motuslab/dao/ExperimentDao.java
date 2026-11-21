@@ -254,4 +254,23 @@ public class ExperimentDao {
         exp.setUpdatedAt(rs.getObject("updated_at", OffsetDateTime.class));
         return exp;
     }
+
+    public void updateDetails(int experimentId, String title, String description) {
+        String sql = """
+                UPDATE experiments
+                SET title = ?, description = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+                """;
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, title);
+            ps.setString(2, description);
+            ps.setInt(3, experimentId);
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            throw new DataAccessException("Deney bilgileri güncellenirken hata oluştu.", e);
+        }
+    }
 }

@@ -298,7 +298,17 @@ public class DashboardView extends BorderPane {
         if (canEdit) {
             Button saveParamsButton = new Button("Parametreleri Kaydet");
             saveParamsButton.setOnAction(e -> handleSaveParameters());
-            actionBar.getChildren().add(saveParamsButton);
+
+            Button editExpButton = new Button("Deneyi Düzenle");
+            editExpButton.setOnAction(e -> {
+                if (EditExperimentDialog.show(selectedExperiment, experimentService)) {
+                    int expId = selectedExperiment.getId();
+                    loadExperiments(expId);
+                    showFeedback("Deney bilgileri güncellendi.", false);
+                }
+            });
+
+            actionBar.getChildren().addAll(saveParamsButton, editExpButton);
         }
         if (isOwner) {
             Button shareButton = new Button("Paylaş");
