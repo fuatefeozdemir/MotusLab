@@ -4,6 +4,8 @@ import com.motuslab.config.DatabaseConnection;
 import com.motuslab.exception.DataAccessException;
 import com.motuslab.model.RunMetric;
 import com.motuslab.model.RunSample;
+import com.motuslab.model.RunStatusHistory;
+import com.motuslab.model.RunParameterSnapshot;
 import com.motuslab.model.SimulationRun;
 import com.motuslab.simulation.SimulationSample;
 
@@ -268,5 +270,69 @@ public class SimulationRunDao {
         run.setErrorMessage(rs.getString("error_message"));
         run.setRunNumber(rs.getInt("run_number"));
         return run;
+    }
+
+    public List<RunParameterSnapshot> findSnapshotsByRunId(int runId) {
+        String sql = """
+                SELECT rps.id, rps.run_id, rps.parameter_definition_id,
+                       pd.code AS parameter_code, pd.name AS parameter_name, pd.unit, rps.value
+                FROM run_parameter_snapshots rps
+                JOIN parameter_definitions pd ON pd.id = rps.parameter_definition_id
+                WHERE rps.run_id = ?
+                ORDER BY pd.display_order ASC, pd.id ASC
+                """;
+        List<RunParameterSnapshot> list = new ArrayList<>();
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setInt(1, runId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    RunParameterSnapshot s = new RunParameterSnapshot();
+                    s.setId(rs.getInt("id"));
+                    s.setRunId(rs.getInt("run_id"));
+                    s.setParameterDefinitionId(rs.getInt("parameter_definition_id"));
+                    s.setParameterCode(rs.getString("parameter_code"));
+                    s.setParameterName(rs.getString("parameter_name"));
+                    s.setUnit(rs.getString("unit"));
+                    s.setValue(rs.getDouble("value"));
+                    list.add(s);
+                }
+            }
+            return list;
+        } catch (SQLException e) {
+            throw new DataAccessException("Parametre snapshot verileri alınırken hata oluştu.", e);
+        }
+    }
+
+    public List<RunStatusHistory> findStatusHistoryByRunId(int runId) {
+        String sql = """
+                SELECT id, run_id, old_status, new_status, changed_at
+                FROM run_status_history
+                WHERE run_id = ?
+                ORDER BY changed_at ASC, id ASC
+                """;
+        List<RunStatusHistory> list = new ArrayList<>();
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setInt(1, runId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    RunStatusHistory h = new RunStatusHistory();
+                    h.setId(rs.getInt("id"));
+                    h.setRunId(rs.getInt("run_id"));
+                    h.setOldStatus(rs.getString("old_status"));
+                    h.setNewStatus(rs.getString("new_status"));
+                    h.setChangedAt(rs.getObject("changed_at", OffsetDateTime.class));
+                    list.add(h);
+                }
+            }
+            return list;
+        } catch (SQLException e) {
+            throw new DataAccessException("Çalıştırma durum geçmişi alınırken hata oluştu.", e);
+        }
     }
 }

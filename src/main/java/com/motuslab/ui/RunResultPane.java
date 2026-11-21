@@ -4,7 +4,9 @@ import atlantafx.base.theme.Styles;
 import com.motuslab.exception.MotusLabException;
 import com.motuslab.model.Experiment;
 import com.motuslab.model.RunMetric;
+import com.motuslab.model.RunParameterSnapshot;
 import com.motuslab.model.RunSample;
+import com.motuslab.model.RunStatusHistory;
 import com.motuslab.model.SimulationRun;
 import com.motuslab.service.CsvExportService;
 import com.motuslab.service.SimulationRunService;
@@ -15,7 +17,9 @@ import javafx.scene.chart.NumberAxis;
 import javafx.scene.chart.XYChart;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.Separator;
 import javafx.scene.layout.FlowPane;
+import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
@@ -23,6 +27,7 @@ import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 
 import java.io.File;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -32,6 +37,7 @@ import java.util.function.ToDoubleFunction;
 public class RunResultPane extends VBox {
 
     private static final int MAX_CHART_POINTS = 500;
+    private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss.SSS");
 
     private final SimulationRunService simulationRunService;
     private final CsvExportService csvExportService;
@@ -64,6 +70,7 @@ public class RunResultPane extends VBox {
             errLabel.getStyleClass().add(Styles.DANGER);
             errLabel.setWrapText(true);
             getChildren().add(errLabel);
+            renderAuditSection(run);
             return;
         }
 
@@ -71,6 +78,7 @@ public class RunResultPane extends VBox {
             Label statusLabel = new Label("Durum: " + run.getStatus());
             statusLabel.getStyleClass().add(Styles.TEXT_MUTED);
             getChildren().add(statusLabel);
+            renderAuditSection(run);
             return;
         }
 
@@ -137,6 +145,60 @@ public class RunResultPane extends VBox {
             }
 
             getChildren().addAll(headerRow, metricsPane, chartsBox);
+            renderAuditSection(run);
+        } catch (MotusLabException ex) {
+            feedbackCallback.accept(ex.getMessage(), true);
+        }
+    }
+
+    private void renderAuditSection(SimulationRun run) {
+        try {
+            List<RunParameterSnapshot> snapshots = simulationRunService.getSnapshotsByRun(run.getId());
+            List<RunStatusHistory> history = simulationRunService.getStatusHistoryByRun(run.getId());
+
+            VBox snapshotBox = new VBox(8);
+            snapshotBox.setPadding(new Insets(12));
+            snapshotBox.setStyle("-fx-border-color: -color-border-default; -fx-border-radius: 6;");
+            Label snapTitle = new Label("Kullanılan Parametreler (Snapshot)");
+            snapTitle.getStyleClass().add(Styles.TEXT_BOLD);
+
+            GridPane snapGrid = new GridPane();
+            snapGrid.setHgap(16);
+            snapGrid.setVgap(6);
+            int sRow = 0;
+            for (RunParameterSnapshot snap : snapshots) {
+                Label name = new Label(snap.getParameterName());
+                name.getStyleClass().add(Styles.TEXT_MUTED);
+                Label val = new Label(String.format(Locale.US, "%s %s", snap.getValue(), snap.getUnit()));
+                snapGrid.addRow(sRow++, name, val);
+            }
+            snapshotBox.getChildren().addAll(snapTitle, snapGrid);
+
+            VBox historyBox = new VBox(8);
+            historyBox.setPadding(new Insets(12));
+            historyBox.setStyle("-fx-border-color: -color-border-default; -fx-border-radius: 6;");
+            Label histTitle = new Label("Durum Geçmişi");
+            histTitle.getStyleClass().add(Styles.TEXT_BOLD);
+
+            GridPane histGrid = new GridPane();
+            histGrid.setHgap(16);
+            histGrid.setVgap(6);
+            int hRow = 0;
+            for (RunStatusHistory h : history) {
+                String transition = (h.getOldStatus() == null ? "—" : h.getOldStatus()) + " → " + h.getNewStatus();
+                String time = h.getChangedAt() != null ? h.getChangedAt().format(TIME_FMT) : "-";
+                Label transLabel = new Label(transition);
+                Label timeLabel = new Label(time);
+                timeLabel.getStyleClass().add(Styles.TEXT_MUTED);
+                histGrid.addRow(hRow++, transLabel, timeLabel);
+            }
+            historyBox.getChildren().addAll(histTitle, histGrid);
+
+            HBox.setHgrow(snapshotBox, Priority.ALWAYS);
+            HBox.setHgrow(historyBox, Priority.ALWAYS);
+            HBox auditRow = new HBox(16, snapshotBox, historyBox);
+
+            getChildren().addAll(new Separator(), auditRow);
         } catch (MotusLabException ex) {
             feedbackCallback.accept(ex.getMessage(), true);
         }

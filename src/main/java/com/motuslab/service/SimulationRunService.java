@@ -3,12 +3,7 @@ package com.motuslab.service;
 import com.motuslab.dao.ExperimentDao;
 import com.motuslab.dao.SimulationRunDao;
 import com.motuslab.exception.NotFoundException;
-import com.motuslab.model.Experiment;
-import com.motuslab.model.ExperimentParameter;
-import com.motuslab.model.RunMetric;
-import com.motuslab.model.RunSample;
-import com.motuslab.model.SimulationRun;
-import com.motuslab.model.User;
+import com.motuslab.model.*;
 import com.motuslab.simulation.SimulationEngine;
 import com.motuslab.simulation.SimulationResult;
 
@@ -98,5 +93,15 @@ public class SimulationRunService {
     public List<RunMetric> getMetricsByRun(int runId) {
         SessionManager.requireCurrentUser();
         return simulationRunDao.findMetricsByRunId(runId);
+    }
+
+    public List<RunParameterSnapshot> getSnapshotsByRun(int runId) {
+        SessionManager.requireCurrentUser();
+        return simulationRunDao.findSnapshotsByRunId(runId);
+    }
+
+    public List<RunStatusHistory> getStatusHistoryByRun(int runId) {
+        SessionManager.requireCurrentUser();
+        return simulationRunDao.findStatusHistoryByRunId(runId);
     }
 }
