@@ -1,6 +1,7 @@
 package com.motuslab.ui.component;
 
 import com.motuslab.model.User;
+import com.motuslab.ui.UiHelper;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
@@ -10,6 +11,7 @@ import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
+import org.kordamp.ikonli.feather.Feather;
 
 import java.io.InputStream;
 
@@ -33,17 +35,19 @@ public class TopBar extends HBox {
         Label roleBadge = new Label(currentUser.getRoleName());
         roleBadge.getStyleClass().add(currentUser.isAdmin() ? "ml-badge-accent" : "ml-badge");
 
-        HBox userBox = new HBox(8, usernameLabel, roleBadge);
+        HBox userBox = new HBox(8, UiHelper.icon(Feather.USER, 15), usernameLabel, roleBadge);
         userBox.setAlignment(Pos.CENTER_LEFT);
 
-        Button logoutButton = new Button("Çıkış Yap");
+        Button logoutButton = new Button("Çıkış Yap", UiHelper.icon(Feather.LOG_OUT, 14));
         logoutButton.getStyleClass().add("ml-btn-secondary");
+        logoutButton.setGraphicTextGap(6);
         logoutButton.setOnAction(e -> onLogout.run());
 
         getChildren().addAll(brandNode, spacer);
         if (currentUser.isAdmin()) {
-            Button adminButton = new Button("Admin Paneli");
+            Button adminButton = new Button("Admin Paneli", UiHelper.icon(Feather.SHIELD, 14, "ml-icon-accent"));
             adminButton.getStyleClass().add("ml-btn-secondary");
+            adminButton.setGraphicTextGap(6);
             adminButton.setOnAction(e -> onAdminClick.run());
             getChildren().add(adminButton);
         }
@@ -60,7 +64,6 @@ public class TopBar extends HBox {
                 return logoView;
             }
         } catch (Exception ignored) {
-            // Görsel yüklenemezse metin başlığa düşer.
         }
         Label fallback = new Label("MotusLab");
         fallback.getStyleClass().add("ml-brand-title");

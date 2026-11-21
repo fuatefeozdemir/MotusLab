@@ -12,6 +12,7 @@ import javafx.application.Application;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.image.Image;
+import javafx.scene.text.Font;
 import javafx.stage.Stage;
 
 import java.io.InputStream;
@@ -21,6 +22,13 @@ public class MainApp extends Application {
 
     private static final String APP_STYLESHEET = "/css/motuslab.css";
     private static final String APP_ICON = "/images/logo-icon.png";
+    private static final String[] APP_FONTS = {
+            "/fonts/Inter-Regular.ttf",
+            "/fonts/Inter-Medium.ttf",
+            "/fonts/Inter-Bold.ttf",
+            "/fonts/JetBrainsMono-Regular.ttf",
+            "/fonts/JetBrainsMono-Bold.ttf"
+    };
 
     private final AuthService authService = new AuthService();
     private final ExperimentService experimentService = new ExperimentService();
@@ -35,6 +43,7 @@ public class MainApp extends Application {
 
         primaryStage.setTitle("MotusLab");
         loadAppIcon();
+        loadFonts();
         showAuthView();
         primaryStage.show();
     }
@@ -46,6 +55,18 @@ public class MainApp extends Application {
             }
         } catch (Exception ignored) {
             // İkon yüklenemezse uygulama varsayılan ikonla açılır.
+        }
+    }
+
+    private void loadFonts() {
+        for (String path : APP_FONTS) {
+            try (InputStream is = getClass().getResourceAsStream(path)) {
+                if (is != null) {
+                    Font.loadFont(is, 14);
+                }
+            } catch (Exception ignored) {
+                // Font yüklenemezse CSS fallback fontları devreye girer.
+            }
         }
     }
 
@@ -68,9 +89,9 @@ public class MainApp extends Application {
                     showAuthView();
                 }
         );
-        primaryStage.setMinWidth(960);
-        primaryStage.setMinHeight(640);
-        primaryStage.setScene(createScene(dashboardView, 1200, 780));
+        primaryStage.setMinWidth(1040);
+        primaryStage.setMinHeight(660);
+        primaryStage.setScene(createScene(dashboardView, 1280, 800));
         primaryStage.centerOnScreen();
     }
 

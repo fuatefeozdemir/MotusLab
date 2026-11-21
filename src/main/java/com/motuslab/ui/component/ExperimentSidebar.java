@@ -2,6 +2,7 @@ package com.motuslab.ui.component;
 
 import com.motuslab.model.Experiment;
 import com.motuslab.model.User;
+import com.motuslab.ui.UiHelper;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
@@ -17,6 +18,7 @@ import javafx.scene.control.TextField;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
+import org.kordamp.ikonli.feather.Feather;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -44,13 +46,16 @@ public class ExperimentSidebar extends VBox {
         this.currentUser = currentUser;
 
         getStyleClass().add("ml-sidebar");
-        setPrefWidth(290);
+        setPrefWidth(275);
 
         Label headerLabel = new Label("Deneylerim");
         headerLabel.getStyleClass().add("ml-section-title");
+        HBox headerRow = new HBox(8, UiHelper.icon(Feather.LAYERS, 15, "ml-icon-accent"), headerLabel);
+        headerRow.setAlignment(Pos.CENTER_LEFT);
 
-        Button newExpButton = new Button("+ Yeni Deney");
+        Button newExpButton = new Button("Yeni Deney", UiHelper.icon(Feather.PLUS, 15, "ml-icon-light"));
         newExpButton.getStyleClass().add("ml-btn-primary");
+        newExpButton.setGraphicTextGap(6);
         newExpButton.setMaxWidth(Double.MAX_VALUE);
         newExpButton.setOnAction(e -> onNewExperiment.run());
 
@@ -82,6 +87,10 @@ public class ExperimentSidebar extends VBox {
                     setText(null);
                     setGraphic(null);
                 } else {
+                    Feather typeIcon = "PROJECTILE_2D".equals(item.getSimulationTypeCode())
+                            ? Feather.CROSSHAIR
+                            : Feather.ACTIVITY;
+
                     Label title = new Label(item.getTitle());
                     title.getStyleClass().add("ml-text-bold");
 
@@ -98,11 +107,13 @@ public class ExperimentSidebar extends VBox {
                         subtitle += " • @" + item.getOwnerUsername();
                     }
                     Label type = new Label(subtitle);
-                    type.getStyleClass().add("ml-text-secondary");
+                    type.getStyleClass().add("ml-text-muted");
 
-                    VBox box = new VBox(3, titleRow, type);
-                    box.setPadding(new Insets(4, 2, 4, 2));
-                    setGraphic(box);
+                    VBox textCol = new VBox(2, titleRow, type);
+                    HBox row = new HBox(10, UiHelper.icon(typeIcon, 16, "ml-icon-accent"), textCol);
+                    row.setAlignment(Pos.CENTER_LEFT);
+                    row.setPadding(new Insets(3, 2, 3, 2));
+                    setGraphic(row);
                 }
             }
         });
@@ -112,7 +123,7 @@ public class ExperimentSidebar extends VBox {
         );
 
         VBox.setVgrow(experimentListView, Priority.ALWAYS);
-        getChildren().addAll(headerLabel, newExpButton, searchField, filterRow, showArchivedCheckBox, experimentListView);
+        getChildren().addAll(headerRow, newExpButton, searchField, filterRow, showArchivedCheckBox, experimentListView);
     }
 
     public void setExperiments(List<Experiment> experiments, Integer selectId) {

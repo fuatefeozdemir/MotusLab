@@ -22,6 +22,7 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
+import org.kordamp.ikonli.feather.Feather;
 
 import java.io.File;
 import java.time.format.DateTimeFormatter;
@@ -91,15 +92,17 @@ public class RunResultPane extends VBox {
 
             List<RunMetric> finalMetrics = metrics;
             List<RunSample> finalSamples = samples;
-            Button exportCsvBtn = new Button("CSV Dışa Aktar");
+            Button exportCsvBtn = new Button("CSV", UiHelper.icon(Feather.DOWNLOAD, 14));
             exportCsvBtn.getStyleClass().add("ml-btn-secondary");
+            exportCsvBtn.setGraphicTextGap(6);
             exportCsvBtn.setOnAction(e -> handleExportCsv(experiment, run, finalMetrics, finalSamples));
             headerRow.getChildren().add(exportCsvBtn);
         }
 
         if (canManage) {
-            Button editBtn = new Button("Düzenle");
+            Button editBtn = new Button("Düzenle", UiHelper.icon(Feather.EDIT_2, 14));
             editBtn.getStyleClass().add("ml-btn-secondary");
+            editBtn.setGraphicTextGap(6);
             editBtn.setOnAction(e -> {
                 if (EditRunDialog.show(run, simulationRunService)) {
                     feedbackCallback.accept("Çalıştırma bilgileri güncellendi.", false);
@@ -107,8 +110,9 @@ public class RunResultPane extends VBox {
                 }
             });
 
-            Button deleteBtn = new Button("Sil");
+            Button deleteBtn = new Button("Sil", UiHelper.icon(Feather.TRASH_2, 14, "ml-icon-danger"));
             deleteBtn.getStyleClass().add("ml-btn-danger");
+            deleteBtn.setGraphicTextGap(6);
             deleteBtn.setOnAction(e -> handleDeleteRun(run));
 
             headerRow.getChildren().addAll(editBtn, deleteBtn);
@@ -230,6 +234,7 @@ public class RunResultPane extends VBox {
                 Label name = new Label(snap.getParameterName());
                 name.getStyleClass().add("ml-text-secondary");
                 Label val = new Label(String.format(Locale.US, "%s %s", snap.getValue(), snap.getUnit()));
+                val.getStyleClass().add("ml-mono");
                 snapGrid.addRow(sRow++, name, val);
             }
             snapshotBox.getChildren().addAll(snapTitle, snapGrid);
@@ -248,7 +253,7 @@ public class RunResultPane extends VBox {
                 String time = h.getChangedAt() != null ? h.getChangedAt().format(TIME_FMT) : "-";
                 Label transLabel = new Label(transition);
                 Label timeLabel = new Label(time);
-                timeLabel.getStyleClass().add("ml-text-muted");
+                timeLabel.getStyleClass().addAll("ml-text-muted", "ml-mono");
                 histGrid.addRow(hRow++, transLabel, timeLabel);
             }
             historyBox.getChildren().addAll(histTitle, histGrid);

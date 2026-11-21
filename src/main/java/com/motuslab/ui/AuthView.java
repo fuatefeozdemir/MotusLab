@@ -7,6 +7,7 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
+import javafx.scene.control.Control;
 import javafx.scene.control.Hyperlink;
 import javafx.scene.control.Label;
 import javafx.scene.control.PasswordField;
@@ -15,6 +16,7 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+import org.kordamp.ikonli.feather.Feather;
 
 import java.io.InputStream;
 import java.util.function.Consumer;
@@ -40,7 +42,7 @@ public class AuthView extends VBox {
     private final Button submitButton = new Button("Giriş Yap");
     private final Hyperlink toggleModeLink = new Hyperlink("Hesabın yok mu? Kayıt ol");
 
-    private final VBox formBox = new VBox(10);
+    private final VBox formBox = new VBox(12);
 
     public AuthView(AuthService authService, Consumer<User> onLoginSuccess) {
         this.authService = authService;
@@ -55,39 +57,38 @@ public class AuthView extends VBox {
         setPadding(new Insets(32));
 
         Node brandHeader = createBrandHeader();
-
         subtitleLabel.getStyleClass().add("ml-text-secondary");
 
         VBox headerBox = new VBox(8, brandHeader, subtitleLabel);
         headerBox.setAlignment(Pos.CENTER);
 
-        identifierField.setPromptText("Kullanıcı adı veya e-posta");
-        usernameField.setPromptText("Kullanıcı adı");
-        emailField.setPromptText("E-posta");
+        identifierField.setPromptText("kullaniciadi veya ornek@mail.com");
+        usernameField.setPromptText("kullaniciadi");
+        emailField.setPromptText("ornek@mail.com");
         fullNameField.setPromptText("Ad Soyad (opsiyonel)");
-        passwordField.setPromptText("Şifre");
+        passwordField.setPromptText("••••••••");
 
         feedbackLabel.setWrapText(true);
-        feedbackLabel.setVisible(false);
-        feedbackLabel.setManaged(false);
+        UiHelper.clearFeedback(feedbackLabel);
 
         submitButton.getStyleClass().add("ml-btn-primary");
+        submitButton.setGraphicTextGap(8);
         submitButton.setMaxWidth(Double.MAX_VALUE);
         submitButton.setDefaultButton(true);
         submitButton.setOnAction(e -> handleSubmit());
 
         toggleModeLink.setOnAction(e -> {
             registerMode = !registerMode;
-            clearFeedback();
+            UiHelper.clearFeedback(feedbackLabel);
             renderForm();
         });
 
         HBox footerBox = new HBox(toggleModeLink);
         footerBox.setAlignment(Pos.CENTER);
 
-        VBox card = new VBox(16, headerBox, formBox, feedbackLabel, submitButton, footerBox);
+        VBox card = new VBox(18, headerBox, formBox, feedbackLabel, submitButton, footerBox);
         card.setAlignment(Pos.CENTER_LEFT);
-        card.setMaxWidth(380);
+        card.setMaxWidth(390);
         card.getStyleClass().add("ml-auth-card");
 
         getChildren().add(card);
@@ -98,16 +99,22 @@ public class AuthView extends VBox {
             if (is != null) {
                 ImageView logoView = new ImageView(new Image(is));
                 logoView.setPreserveRatio(true);
-                logoView.setFitHeight(44);
+                logoView.setFitHeight(46);
                 logoView.setSmooth(true);
                 return logoView;
             }
         } catch (Exception ignored) {
-            // Görsel bulunamazsa metin başlığa düşer.
         }
         Label fallback = new Label("MotusLab");
         fallback.getStyleClass().add("ml-brand-title");
         return fallback;
+    }
+
+    private VBox labeledField(String labelText, Control input) {
+        Label lbl = new Label(labelText);
+        lbl.getStyleClass().add("ml-text-secondary");
+        VBox box = new VBox(5, lbl, input);
+        return box;
     }
 
     private void renderForm() {
@@ -117,18 +124,28 @@ public class AuthView extends VBox {
         if (registerMode) {
             subtitleLabel.setText("Yeni araştırmacı hesabı oluşturun");
             submitButton.setText("Kayıt Ol");
+            submitButton.setGraphic(UiHelper.icon(Feather.USER_PLUS, 15, "ml-icon-light"));
             toggleModeLink.setText("Zaten hesabın var mı? Giriş yap");
-            formBox.getChildren().addAll(usernameField, emailField, fullNameField, passwordField);
+            formBox.getChildren().addAll(
+                    labeledField("Kullanıcı Adı", usernameField),
+                    labeledField("E-posta", emailField),
+                    labeledField("Ad Soyad", fullNameField),
+                    labeledField("Şifre", passwordField)
+            );
         } else {
             subtitleLabel.setText("Hesabınıza giriş yapın");
             submitButton.setText("Giriş Yap");
+            submitButton.setGraphic(UiHelper.icon(Feather.LOG_IN, 15, "ml-icon-light"));
             toggleModeLink.setText("Hesabın yok mu? Kayıt ol");
-            formBox.getChildren().addAll(identifierField, passwordField);
+            formBox.getChildren().addAll(
+                    labeledField("Kullanıcı Adı veya E-posta", identifierField),
+                    labeledField("Şifre", passwordField)
+            );
         }
     }
 
     private void handleSubmit() {
-        clearFeedback();
+        UiHelper.clearFeedback(feedbackLabel);
         try {
             if (registerMode) {
                 authService.register(
@@ -141,27 +158,13 @@ public class AuthView extends VBox {
                 registerMode = false;
                 renderForm();
                 identifierField.setText(createdUsername);
-                showFeedback("Kayıt başarılı. Şimdi giriş yapabilirsiniz.", false);
+                UiHelper.setFeedback(feedbackLabel, "Kayıt başarılı. Şimdi giriş yapabilirsiniz.", false);
             } else {
                 User user = authService.login(identifierField.getText(), passwordField.getText());
                 onLoginSuccess.accept(user);
             }
         } catch (MotusLabException ex) {
-            showFeedback(ex.getMessage(), true);
+            UiHelper.setFeedback(feedbackLabel, ex.getMessage(), true);
         }
-    }
-
-    private void showFeedback(String message, boolean isError) {
-        feedbackLabel.setText(message);
-        feedbackLabel.getStyleClass().removeAll("ml-feedback-error", "ml-feedback-success");
-        feedbackLabel.getStyleClass().add(isError ? "ml-feedback-error" : "ml-feedback-success");
-        feedbackLabel.setVisible(true);
-        feedbackLabel.setManaged(true);
-    }
-
-    private void clearFeedback() {
-        feedbackLabel.setText("");
-        feedbackLabel.setVisible(false);
-        feedbackLabel.setManaged(false);
     }
 }

@@ -1,5 +1,5 @@
 /* =========================================
-   MotusLab — Tasarım Sistemi (Tam Sürüm)
+   MotusLab — Neo-Glass & Workspace Tasarım Sistemi
    ========================================= */
 
 .root {
@@ -20,7 +20,8 @@
     -ml-bg:                 #F6F0E9;
     -ml-bg-secondary:       #EDE4DC;
     -ml-surface:            #FFFFFF;
-    -ml-surface-elevated:   #FCF9F6;
+    -ml-surface-glass:      rgba(255, 255, 255, 0.82);
+    -ml-surface-elevated:   rgba(252, 249, 246, 0.88);
     -ml-surface-muted:      #F0E8E5;
     -ml-border:             #DDD5D1;
     -ml-border-subtle:      #EAE2DE;
@@ -49,13 +50,15 @@
     -ml-warning:            -ml-amber;
     -ml-danger:             -ml-burgundy;
 
-    -fx-background-color:   -ml-bg;
+    -fx-font-family:        "Inter", "Segoe UI", system-ui, sans-serif;
+    -fx-font-size:          13px;
     -fx-text-fill:          -ml-text-primary;
+    -fx-background-color:   linear-gradient(to bottom right, #F8F3EC, #EFE6DF 55%, #F4EAEB);
 
-    /* AtlantaFX PrimerLight Override */
+    /* AtlantaFX Override */
     -color-accent-fg:           -ml-magenta;
     -color-accent-emphasis:     -ml-magenta;
-    -color-accent-muted:        rgba(215, 16, 97, 0.35);
+    -color-accent-muted:        rgba(215, 16, 97, 0.30);
     -color-accent-subtle:       -ml-hover;
 
     -color-fg-default:          -ml-text-primary;
@@ -75,12 +78,27 @@
     -color-success-emphasis:    -ml-eucalyptus;
 }
 
+/* --- İkonlar --- */
+.ml-icon {
+    -fx-icon-color: -ml-text-secondary;
+}
+.ml-icon-light {
+    -fx-icon-color: #FFFFFF;
+}
+.ml-icon-accent {
+    -fx-icon-color: -ml-magenta;
+}
+.ml-icon-danger {
+    -fx-icon-color: -ml-danger;
+}
+
 /* --- Yerleşim Yüzeyleri --- */
 .ml-topbar {
-    -fx-background-color:   -ml-surface;
+    -fx-background-color:   rgba(255, 255, 255, 0.86);
     -fx-border-color:       transparent transparent -ml-border transparent;
     -fx-border-width:       0 0 1 0;
-    -fx-padding:            12 20 12 20;
+    -fx-padding:            10 20 10 20;
+    -fx-effect:             dropshadow(gaussian, rgba(32, 45, 62, 0.05), 10, 0, 0, 2);
 }
 
 .ml-sidebar {
@@ -90,9 +108,16 @@
     -fx-padding:            16;
 }
 
+.ml-inspector {
+    -fx-background-color:   -ml-surface-elevated;
+    -fx-border-color:       transparent transparent transparent -ml-border;
+    -fx-border-width:       0 0 0 1;
+    -fx-padding:            16;
+}
+
 .ml-detail-pane {
-    -fx-background-color:   -ml-bg;
-    -fx-padding:            24;
+    -fx-background-color:   transparent;
+    -fx-padding:            20 24 24 24;
 }
 
 .ml-scroll-pane,
@@ -100,55 +125,49 @@
     -fx-background-color:   transparent;
 }
 
-/* --- Kartlar ve Kutular --- */
+/* --- Neo-Glass Kartlar --- */
 .ml-auth-card {
-    -fx-background-color:   -ml-surface;
-    -fx-border-color:       -ml-border;
-    -fx-border-width:       1;
-    -fx-border-radius:      10;
-    -fx-background-radius:  10;
-    -fx-padding:            28;
+    -fx-background-color:   rgba(255, 255, 255, 0.88);
+    -fx-border-color:       rgba(255, 255, 255, 0.95);
+    -fx-border-width:       1.5;
+    -fx-border-radius:      16;
+    -fx-background-radius:  16;
+    -fx-padding:            32;
+    -fx-effect:             dropshadow(gaussian, rgba(32, 45, 62, 0.12), 28, 0, 0, 10);
 }
 
 .ml-card {
-    -fx-background-color:   -ml-surface;
-    -fx-border-color:       -ml-border;
+    -fx-background-color:   -ml-surface-glass;
+    -fx-border-color:       rgba(221, 213, 209, 0.85);
     -fx-border-width:       1;
-    -fx-border-radius:      8;
-    -fx-background-radius:  8;
+    -fx-border-radius:      12;
+    -fx-background-radius:  12;
     -fx-padding:            16;
-}
-
-.ml-card-subtle {
-    -fx-background-color:   -ml-surface-muted;
-    -fx-border-color:       -ml-border-subtle;
-    -fx-border-width:       1;
-    -fx-border-radius:      6;
-    -fx-background-radius:  6;
-    -fx-padding:            12;
+    -fx-effect:             dropshadow(gaussian, rgba(32, 45, 62, 0.06), 14, 0, 0, 4);
 }
 
 .ml-metric-card {
-    -fx-background-color:   -ml-surface;
-    -fx-border-color:       -ml-border;
+    -fx-background-color:   -ml-surface-glass;
+    -fx-border-color:       rgba(221, 213, 209, 0.85);
     -fx-border-width:       1;
-    -fx-border-radius:      8;
-    -fx-background-radius:  8;
-    -fx-padding:            12 16 12 16;
+    -fx-border-radius:      12;
+    -fx-background-radius:  12;
+    -fx-padding:            14 18 14 18;
+    -fx-effect:             dropshadow(gaussian, rgba(32, 45, 62, 0.05), 10, 0, 0, 3);
 }
 
 .ml-info-box {
-    -fx-background-color:   -ml-surface;
-    -fx-border-color:       -ml-border;
+    -fx-background-color:   -ml-surface-glass;
+    -fx-border-color:       -ml-border-subtle;
     -fx-border-width:       1;
-    -fx-border-radius:      8;
-    -fx-background-radius:  8;
+    -fx-border-radius:      10;
+    -fx-background-radius:  10;
     -fx-padding:            14;
 }
 
 /* --- Tipografi --- */
 .ml-brand-title {
-    -fx-font-size:          18px;
+    -fx-font-size:          20px;
     -fx-font-weight:        bold;
     -fx-text-fill:          -ml-navy;
 }
@@ -160,15 +179,21 @@
 }
 
 .ml-section-title {
-    -fx-font-size:          15px;
+    -fx-font-size:          14px;
     -fx-font-weight:        bold;
-    -fx-text-fill:          -ml-text-primary;
+    -fx-text-fill:          -ml-navy;
 }
 
 .ml-metric-value {
-    -fx-font-size:          17px;
+    -fx-font-family:        "JetBrains Mono", monospace;
+    -fx-font-size:          18px;
     -fx-font-weight:        bold;
     -fx-text-fill:          -ml-navy;
+}
+
+.ml-mono {
+    -fx-font-family:        "JetBrains Mono", monospace;
+    -fx-font-size:          12.5px;
 }
 
 .ml-text-bold {
@@ -182,33 +207,43 @@
 
 .ml-text-muted {
     -fx-text-fill:          -ml-text-muted;
+    -fx-font-size:          12px;
 }
 
-/* --- Rozetler (Badges) --- */
+/* --- Rozetler --- */
 .ml-badge {
     -fx-background-color:   -ml-surface-muted;
     -fx-text-fill:          -ml-text-secondary;
-    -fx-background-radius:  12;
+    -fx-background-radius:  20;
     -fx-padding:            3 10 3 10;
-    -fx-font-size:          12px;
+    -fx-font-size:          11.5px;
     -fx-font-weight:        bold;
 }
 
 .ml-badge-accent {
-    -fx-background-color:   -ml-hover;
+    -fx-background-color:   rgba(215, 16, 97, 0.12);
     -fx-text-fill:          -ml-magenta;
-    -fx-background-radius:  12;
+    -fx-background-radius:  20;
     -fx-padding:            3 10 3 10;
-    -fx-font-size:          12px;
+    -fx-font-size:          11.5px;
     -fx-font-weight:        bold;
 }
 
 .ml-badge-warning {
-    -fx-background-color:   rgba(215, 169, 79, 0.18);
+    -fx-background-color:   rgba(215, 169, 79, 0.22);
     -fx-text-fill:          -ml-navy;
-    -fx-background-radius:  12;
+    -fx-background-radius:  20;
     -fx-padding:            3 10 3 10;
-    -fx-font-size:          12px;
+    -fx-font-size:          11.5px;
+    -fx-font-weight:        bold;
+}
+
+.ml-badge-success {
+    -fx-background-color:   rgba(128, 154, 145, 0.20);
+    -fx-text-fill:          -ml-navy;
+    -fx-background-radius:  20;
+    -fx-padding:            3 10 3 10;
+    -fx-font-size:          11.5px;
     -fx-font-weight:        bold;
 }
 
@@ -223,64 +258,129 @@
     -fx-font-weight:        bold;
 }
 
-.ml-feedback-warning {
-    -fx-text-fill:          -ml-warning;
-    -fx-font-weight:        bold;
-}
-
-/* --- Butonlar --- */
+/* --- Modern Butonlar --- */
 .ml-btn-primary {
-    -fx-background-color:   -ml-accent;
-    -fx-text-fill:          -ml-surface;
-    -fx-background-radius:  6;
+    -fx-background-color:   linear-gradient(to right, #D71061, #B80C53);
+    -fx-text-fill:          #FFFFFF;
+    -fx-background-radius:  8;
+    -fx-padding:            8 16 8 16;
     -fx-font-weight:        bold;
     -fx-cursor:             hand;
+    -fx-effect:             dropshadow(gaussian, rgba(215, 16, 97, 0.28), 10, 0, 0, 3);
 }
 
 .ml-btn-primary:hover {
-    -fx-background-color:   -ml-accent-hover;
+    -fx-background-color:   linear-gradient(to right, #7D0140, #D71061);
 }
 
 .ml-btn-primary:disabled {
     -fx-background-color:   -ml-text-disabled;
-    -fx-text-fill:          -ml-surface;
+    -fx-effect:             none;
 }
 
 .ml-btn-secondary {
-    -fx-background-color:   -ml-surface;
+    -fx-background-color:   rgba(255, 255, 255, 0.85);
     -fx-text-fill:          -ml-text-primary;
     -fx-border-color:       -ml-border;
     -fx-border-width:       1;
-    -fx-border-radius:      6;
-    -fx-background-radius:  6;
+    -fx-border-radius:      8;
+    -fx-background-radius:  8;
+    -fx-padding:            7 14 7 14;
     -fx-cursor:             hand;
 }
 
 .ml-btn-secondary:hover {
     -fx-background-color:   -ml-hover;
+    -fx-border-color:       -ml-dusty-rose;
 }
 
 .ml-btn-danger {
-    -fx-background-color:   -ml-surface;
+    -fx-background-color:   rgba(255, 255, 255, 0.85);
     -fx-text-fill:          -ml-danger;
-    -fx-border-color:       -ml-danger;
+    -fx-border-color:       rgba(125, 1, 64, 0.45);
     -fx-border-width:       1;
-    -fx-border-radius:      6;
-    -fx-background-radius:  6;
+    -fx-border-radius:      8;
+    -fx-background-radius:  8;
+    -fx-padding:            7 14 7 14;
     -fx-cursor:             hand;
 }
 
 .ml-btn-danger:hover {
     -fx-background-color:   -ml-danger;
-    -fx-text-fill:          -ml-surface;
+    -fx-text-fill:          #FFFFFF;
 }
 
-/* --- Liste ve Dialoglar --- */
-.list-view {
-    -fx-background-color:   -ml-surface;
+.ml-btn-icon {
+    -fx-background-color:   transparent;
+    -fx-background-radius:  8;
+    -fx-padding:            7;
+    -fx-cursor:             hand;
+}
+
+.ml-btn-icon:hover {
+    -fx-background-color:   -ml-hover;
+}
+
+/* --- Form Kontrolleri & Slider --- */
+.text-field, .password-field, .combo-box, .text-area {
+    -fx-background-color:   rgba(255, 255, 255, 0.92);
     -fx-border-color:       -ml-border;
-    -fx-border-radius:      6;
-    -fx-background-radius:  6;
+    -fx-border-radius:      8;
+    -fx-background-radius:  8;
+}
+
+.text-field:focused, .password-field:focused, .combo-box:focused, .text-area:focused {
+    -fx-border-color:       -ml-magenta;
+}
+
+.slider .track {
+    -fx-background-color:   -ml-bg-secondary;
+    -fx-background-radius:  4;
+    -fx-pref-height:        5;
+}
+
+.slider .thumb {
+    -fx-background-color:   -ml-magenta;
+    -fx-background-radius:  10;
+    -fx-pref-width:         14;
+    -fx-pref-height:        14;
+    -fx-effect:             dropshadow(gaussian, rgba(215, 16, 97, 0.35), 6, 0, 0, 1);
+}
+
+/* --- Sekmeler (TabPane) --- */
+.ml-tabs .tab-header-area .tab-header-background {
+    -fx-background-color:   transparent;
+}
+
+.ml-tabs .tab {
+    -fx-background-color:   transparent;
+    -fx-padding:            6 14 8 14;
+    -fx-cursor:             hand;
+}
+
+.ml-tabs .tab:selected {
+    -fx-border-color:       transparent transparent -ml-magenta transparent;
+    -fx-border-width:       0 0 2.5 0;
+}
+
+.ml-tabs .tab:selected .tab-label {
+    -fx-text-fill:          -ml-magenta;
+    -fx-font-weight:        bold;
+}
+
+/* --- Listeler --- */
+.list-view {
+    -fx-background-color:   rgba(255, 255, 255, 0.72);
+    -fx-border-color:       -ml-border-subtle;
+    -fx-border-radius:      10;
+    -fx-background-radius:  10;
+    -fx-padding:            4;
+}
+
+.list-cell {
+    -fx-background-color:   transparent;
+    -fx-background-radius:  8;
+    -fx-padding:            6 8 6 8;
 }
 
 /* noinspection CssInvalidPseudoSelector */
@@ -299,24 +399,25 @@
     -fx-background-color:   -ml-bg;
 }
 
-/* --- Grafik Serileri --- */
+/* --- Grafikler --- */
 .chart {
-    -fx-background-color:   -ml-surface;
-    -fx-border-color:       -ml-border;
-    -fx-border-radius:      8;
-    -fx-background-radius:  8;
-    -fx-padding:            10;
+    -fx-background-color:   -ml-surface-glass;
+    -fx-border-color:       rgba(221, 213, 209, 0.85);
+    -fx-border-radius:      12;
+    -fx-background-radius:  12;
+    -fx-padding:            12;
+    -fx-effect:             dropshadow(gaussian, rgba(32, 45, 62, 0.06), 12, 0, 0, 3);
 }
 
 .chart-plot-background {
-    -fx-background-color:   -ml-surface-elevated;
+    -fx-background-color:   rgba(252, 249, 246, 0.75);
 }
 
-.default-color0.chart-series-line { -fx-stroke: -ml-series-1; -fx-stroke-width: 2px; }
-.default-color1.chart-series-line { -fx-stroke: -ml-series-2; -fx-stroke-width: 2px; }
-.default-color2.chart-series-line { -fx-stroke: -ml-series-3; -fx-stroke-width: 2px; }
-.default-color3.chart-series-line { -fx-stroke: -ml-series-4; -fx-stroke-width: 2px; }
-.default-color4.chart-series-line { -fx-stroke: -ml-series-5; -fx-stroke-width: 2px; }
-.default-color5.chart-series-line { -fx-stroke: -ml-series-6; -fx-stroke-width: 2px; }
-.default-color6.chart-series-line { -fx-stroke: -ml-series-7; -fx-stroke-width: 2px; }
-.default-color7.chart-series-line { -fx-stroke: -ml-series-8; -fx-stroke-width: 2px; }
+.default-color0.chart-series-line { -fx-stroke: -ml-series-1; -fx-stroke-width: 2.2px; }
+.default-color1.chart-series-line { -fx-stroke: -ml-series-2; -fx-stroke-width: 2.2px; }
+.default-color2.chart-series-line { -fx-stroke: -ml-series-3; -fx-stroke-width: 2.2px; }
+.default-color3.chart-series-line { -fx-stroke: -ml-series-4; -fx-stroke-width: 2.2px; }
+.default-color4.chart-series-line { -fx-stroke: -ml-series-5; -fx-stroke-width: 2.2px; }
+.default-color5.chart-series-line { -fx-stroke: -ml-series-6; -fx-stroke-width: 2.2px; }
+.default-color6.chart-series-line { -fx-stroke: -ml-series-7; -fx-stroke-width: 2.2px; }
+.default-color7.chart-series-line { -fx-stroke: -ml-series-8; -fx-stroke-width: 2.2px; }

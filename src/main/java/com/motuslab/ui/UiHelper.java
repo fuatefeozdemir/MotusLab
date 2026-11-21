@@ -6,6 +6,8 @@ import javafx.scene.control.Dialog;
 import javafx.scene.control.Label;
 import javafx.scene.image.Image;
 import javafx.stage.Stage;
+import org.kordamp.ikonli.feather.Feather;
+import org.kordamp.ikonli.javafx.FontIcon;
 
 import java.io.InputStream;
 import java.net.URL;
@@ -16,6 +18,19 @@ public final class UiHelper {
     private static final String APP_ICON = "/images/logo-icon.png";
 
     private UiHelper() {
+    }
+
+    public static FontIcon icon(Feather feather, int size) {
+        FontIcon icon = new FontIcon(feather);
+        icon.setIconSize(size);
+        icon.getStyleClass().add("ml-icon");
+        return icon;
+    }
+
+    public static FontIcon icon(Feather feather, int size, String styleClass) {
+        FontIcon icon = icon(feather, size);
+        icon.getStyleClass().add(styleClass);
+        return icon;
     }
 
     public static void styleDialog(Dialog<?> dialog) {

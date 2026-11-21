@@ -14,7 +14,6 @@ import com.motuslab.ui.component.ExperimentDetailPane;
 import com.motuslab.ui.component.ExperimentSidebar;
 import com.motuslab.ui.component.TopBar;
 import javafx.concurrent.Task;
-import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.BorderPane;
 
 import java.util.List;
@@ -78,13 +77,9 @@ public class DashboardView extends BorderPane {
         );
         this.detailPane = new ExperimentDetailPane(runResultPane, actions);
 
-        ScrollPane scrollPane = new ScrollPane(detailPane);
-        scrollPane.setFitToWidth(true);
-        scrollPane.getStyleClass().add("ml-scroll-pane");
-
         setTop(topBar);
         setLeft(sidebar);
-        setCenter(scrollPane);
+        setCenter(detailPane);
 
         loadExperiments(null);
     }
