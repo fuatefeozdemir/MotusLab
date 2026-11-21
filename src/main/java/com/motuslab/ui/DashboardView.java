@@ -316,17 +316,18 @@ public class DashboardView extends BorderPane {
         runsHeaderRow.setAlignment(Pos.CENTER_LEFT);
 
         detailContainer.getChildren().addAll(
+                headerBox,
                 new Separator(),
-                runsHeaderRow,
-                runListView,
-                runResultPane
+                paramsHeader,
+                paramGrid,
+                feedbackLabel
         );
         if (!actionBar.getChildren().isEmpty()) {
             detailContainer.getChildren().add(actionBar);
         }
         detailContainer.getChildren().addAll(
                 new Separator(),
-                runsHeader,
+                runsHeaderRow,
                 runListView,
                 runResultPane
         );
