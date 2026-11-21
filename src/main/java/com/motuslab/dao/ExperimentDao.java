@@ -20,7 +20,7 @@ public class ExperimentDao {
     private static final String BASE_SELECT = """
             SELECT e.id, e.owner_id, u.username AS owner_username,
                    e.simulation_type_id, st.code AS sim_code, st.name AS sim_name,
-                   e.title, e.description, e.created_at, e.updated_at
+                   e.title, e.description, e.is_archived, e.created_at, e.updated_at
             FROM experiments e
             JOIN users u ON u.id = e.owner_id
             JOIN simulation_types st ON st.id = e.simulation_type_id
@@ -250,6 +250,7 @@ public class ExperimentDao {
         exp.setSimulationTypeName(rs.getString("sim_name"));
         exp.setTitle(rs.getString("title"));
         exp.setDescription(rs.getString("description"));
+        exp.setArchived(rs.getBoolean("is_archived"));
         exp.setCreatedAt(rs.getObject("created_at", OffsetDateTime.class));
         exp.setUpdatedAt(rs.getObject("updated_at", OffsetDateTime.class));
         return exp;
