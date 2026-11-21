@@ -273,4 +273,22 @@ public class ExperimentDao {
             throw new DataAccessException("Deney bilgileri güncellenirken hata oluştu.", e);
         }
     }
+
+    public void updateArchivedStatus(int experimentId, boolean archived) {
+        String sql = """
+                UPDATE experiments
+                SET is_archived = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+                """;
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setBoolean(1, archived);
+            ps.setInt(2, experimentId);
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            throw new DataAccessException("Deney arşiv durumu güncellenirken hata oluştu.", e);
+        }
+    }
 }

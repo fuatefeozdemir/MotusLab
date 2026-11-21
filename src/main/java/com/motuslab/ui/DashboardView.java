@@ -11,14 +11,20 @@ import com.motuslab.service.ExperimentMemberService;
 import com.motuslab.service.ExperimentService;
 import com.motuslab.service.SimulationRunService;
 import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
+import javafx.collections.transformation.FilteredList;
+import javafx.concurrent.Task;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
+import javafx.scene.control.CheckBox;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
+import javafx.scene.control.ProgressIndicator;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Separator;
 import javafx.scene.control.TextField;
@@ -28,17 +34,12 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
-import javafx.collections.ObservableList;
-import javafx.collections.transformation.FilteredList;
-import javafx.scene.control.ComboBox;
-import javafx.scene.control.ProgressIndicator;
-import javafx.concurrent.Task;
 
 import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Locale;
+import java.util.Map;
 
 public class DashboardView extends BorderPane {
 
@@ -57,6 +58,8 @@ public class DashboardView extends BorderPane {
     private final TextField searchField = new TextField();
     private final ComboBox<String> ownershipFilterBox = new ComboBox<>();
     private final ComboBox<String> typeFilterBox = new ComboBox<>();
+    private final CheckBox showArchivedCheckBox = new CheckBox("Arşivlenenleri göster");
+
     private final ListView<SimulationRun> runListView = new ListView<>();
     private final VBox detailContainer = new VBox(16);
     private final Label feedbackLabel = new Label();
@@ -87,6 +90,7 @@ public class DashboardView extends BorderPane {
                     }
                 }
         );
+
         initTopBar();
         initLeftPanel();
         initCenterPanel();
@@ -142,6 +146,8 @@ public class DashboardView extends BorderPane {
         HBox.setHgrow(ownershipFilterBox, Priority.ALWAYS);
         HBox.setHgrow(typeFilterBox, Priority.ALWAYS);
 
+        showArchivedCheckBox.selectedProperty().addListener((obs, oldVal, newVal) -> applyExperimentFilters());
+
         experimentListView.setItems(filteredExperiments);
         experimentListView.setCellFactory(lv -> new ListCell<>() {
             @Override
@@ -151,7 +157,8 @@ public class DashboardView extends BorderPane {
                     setText(null);
                     setGraphic(null);
                 } else {
-                    Label title = new Label(item.getTitle());
+                    String titleText = item.isArchived() ? "[Arşiv] " + item.getTitle() : item.getTitle();
+                    Label title = new Label(titleText);
                     title.getStyleClass().add(Styles.TEXT_BOLD);
 
                     String subtitle = item.getSimulationTypeName();
@@ -175,7 +182,7 @@ public class DashboardView extends BorderPane {
 
         VBox.setVgrow(experimentListView, Priority.ALWAYS);
 
-        VBox leftPanel = new VBox(10, headerLabel, newExpButton, searchField, filterRow, experimentListView);
+        VBox leftPanel = new VBox(10, headerLabel, newExpButton, searchField, filterRow, showArchivedCheckBox, experimentListView);
         leftPanel.setPrefWidth(290);
         leftPanel.setPadding(new Insets(16));
         leftPanel.setStyle("-fx-border-color: transparent -color-border-default transparent transparent;");
@@ -275,6 +282,9 @@ public class DashboardView extends BorderPane {
         String simType = typeFilterBox.getValue();
 
         filteredExperiments.setPredicate(exp -> {
+            if (!showArchivedCheckBox.isSelected() && exp.isArchived()) {
+                return false;
+            }
             if ("Benim".equals(ownership) && exp.getOwnerId() != currentUser.getId()) {
                 return false;
             }
@@ -314,16 +324,18 @@ public class DashboardView extends BorderPane {
             permission = "VIEW";
         }
 
+        boolean isArchived = selectedExperiment.isArchived();
         boolean isOwner = "OWNER".equals(permission);
-        boolean canEdit = isOwner || "EDIT".equals(permission);
-        boolean canRun = canEdit || "RUN".equals(permission);
+        boolean canEdit = (isOwner || "EDIT".equals(permission)) && !isArchived;
+        boolean canRun = (canEdit || "RUN".equals(permission)) && !isArchived;
 
         Label titleLabel = new Label(selectedExperiment.getTitle());
         titleLabel.getStyleClass().add(Styles.TITLE_2);
 
         String metaText = "Model: " + selectedExperiment.getSimulationTypeName()
                 + " • Sahip: @" + selectedExperiment.getOwnerUsername()
-                + " • Yetkiniz: " + permission;
+                + " • Yetkiniz: " + permission
+                + (isArchived ? " • ARŞİVLENDİ" : "");
         Label simTypeLabel = new Label(metaText);
         simTypeLabel.getStyleClass().add(Styles.TEXT_MUTED);
 
@@ -394,9 +406,15 @@ public class DashboardView extends BorderPane {
             actionBar.getChildren().addAll(saveParamsButton, editExpButton);
         }
         if (isOwner) {
-            Button shareButton = new Button("Paylaş");
-            shareButton.setOnAction(e -> ShareExperimentDialog.show(selectedExperiment, memberService));
-            actionBar.getChildren().add(shareButton);
+            if (!isArchived) {
+                Button shareButton = new Button("Paylaş");
+                shareButton.setOnAction(e -> ShareExperimentDialog.show(selectedExperiment, memberService));
+                actionBar.getChildren().add(shareButton);
+            }
+
+            Button archiveButton = new Button(isArchived ? "Arşivden Çıkar" : "Arşivle");
+            archiveButton.setOnAction(e -> handleToggleArchive(!isArchived));
+            actionBar.getChildren().add(archiveButton);
 
             Button deleteButton = new Button("Deneyi Sil");
             deleteButton.getStyleClass().add(Styles.DANGER);
@@ -434,6 +452,24 @@ public class DashboardView extends BorderPane {
         );
 
         loadRuns(selectedExperiment.getId(), null);
+    }
+
+    private void handleToggleArchive(boolean archive) {
+        if (selectedExperiment == null) {
+            return;
+        }
+        try {
+            int expId = selectedExperiment.getId();
+            experimentService.setExperimentArchived(expId, archive);
+            if (archive && !showArchivedCheckBox.isSelected()) {
+                loadExperiments(null);
+            } else {
+                loadExperiments(expId);
+            }
+            showFeedback(archive ? "Deney arşivlendi." : "Deney arşivden çıkarıldı.", false);
+        } catch (MotusLabException ex) {
+            showFeedback(ex.getMessage(), true);
+        }
     }
 
     private void loadRuns(int experimentId, Integer selectRunId) {

@@ -96,6 +96,10 @@ public class ExperimentService {
         Experiment experiment = experimentDao.findById(experimentId)
                 .orElseThrow(() -> new NotFoundException("Deney bulunamadı."));
 
+        if (experiment.isArchived()) {
+            throw new ValidationException("Arşivlenmiş bir deney düzenlenemez.");
+        }
+
         requireEditPermission(experiment, currentUser);
 
         if (updatedValues == null || updatedValues.isEmpty()) {
@@ -115,6 +119,38 @@ public class ExperimentService {
         }
 
         experimentDao.updateParameters(experimentId, experiment.getSimulationTypeId(), validatedValues);
+    }
+
+    public void updateExperimentDetails(int experimentId, String title, String description) {
+        User currentUser = SessionManager.requireCurrentUser();
+        Experiment experiment = experimentDao.findById(experimentId)
+                .orElseThrow(() -> new NotFoundException("Deney bulunamadı."));
+
+        if (experiment.isArchived()) {
+            throw new ValidationException("Arşivlenmiş bir deney düzenlenemez.");
+        }
+
+        requireEditPermission(experiment, currentUser);
+
+        String cleanTitle = title == null ? "" : title.trim();
+        if (cleanTitle.isEmpty()) {
+            throw new ValidationException("Deney başlığı boş olamaz.");
+        }
+        if (cleanTitle.length() > 150) {
+            throw new ValidationException("Deney başlığı en fazla 150 karakter olabilir.");
+        }
+
+        String cleanDesc = (description == null || description.isBlank()) ? null : description.trim();
+        experimentDao.updateDetails(experimentId, cleanTitle, cleanDesc);
+    }
+
+    public void setExperimentArchived(int experimentId, boolean archived) {
+        User currentUser = SessionManager.requireCurrentUser();
+        Experiment experiment = experimentDao.findById(experimentId)
+                .orElseThrow(() -> new NotFoundException("Deney bulunamadı."));
+
+        requireOwnerOrAdmin(experiment, currentUser);
+        experimentDao.updateArchivedStatus(experimentId, archived);
     }
 
     public void deleteExperiment(int experimentId) {
@@ -138,7 +174,7 @@ public class ExperimentService {
         }
         String perm = experimentMemberDao.findPermission(experiment.getId(), user.getId()).orElse("NONE");
         if (!"EDIT".equals(perm)) {
-            throw new AuthorizationException("Bu deneyin parametrelerini düzenleme yetkiniz yok.");
+            throw new AuthorizationException("Bu deneyi düzenleme yetkiniz yok.");
         }
     }
 
@@ -152,30 +188,5 @@ public class ExperimentService {
         if (def.getMaxValue() != null && value > def.getMaxValue()) {
             throw new ValidationException(def.getName() + " en fazla " + def.getMaxValue() + " " + def.getUnit() + " olabilir.");
         }
-    }
-
-    public void updateExperimentDetails(int experimentId, String title, String description) {
-        User currentUser = SessionManager.requireCurrentUser();
-        Experiment experiment = experimentDao.findById(experimentId)
-                .orElseThrow(() -> new NotFoundException("Deney bulunamadı."));
-
-        boolean canEdit = currentUser.isAdmin()
-                || experiment.getOwnerId() == currentUser.getId()
-                || "EDIT".equals(experimentMemberDao.findPermission(experimentId, currentUser.getId()).orElse("NONE"));
-
-        if (!canEdit) {
-            throw new AuthorizationException("Bu deneyi düzenleme yetkiniz yok.");
-        }
-
-        String cleanTitle = title == null ? "" : title.trim();
-        if (cleanTitle.isEmpty()) {
-            throw new ValidationException("Deney başlığı boş olamaz.");
-        }
-        if (cleanTitle.length() > 150) {
-            throw new ValidationException("Deney başlığı en fazla 150 karakter olabilir.");
-        }
-
-        String cleanDesc = (description == null || description.isBlank()) ? null : description.trim();
-        experimentDao.updateDetails(experimentId, cleanTitle, cleanDesc);
     }
 }

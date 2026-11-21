@@ -14,6 +14,7 @@ public class Experiment {
     private String description;
     private OffsetDateTime createdAt;
     private OffsetDateTime updatedAt;
+    private boolean archived;
 
     public Experiment() {
     }
@@ -96,5 +97,13 @@ public class Experiment {
 
     public void setUpdatedAt(OffsetDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public boolean isArchived() {
+        return archived;
+    }
+
+    public void setArchived(boolean archived) {
+        this.archived = archived;
     }
 }
