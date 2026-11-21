@@ -31,6 +31,8 @@ import javafx.scene.layout.VBox;
 import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.ProgressIndicator;
+import javafx.concurrent.Task;
 
 import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashMap;
@@ -363,11 +365,18 @@ public class DashboardView extends BorderPane {
         }
 
         HBox actionBar = new HBox(10);
+        actionBar.setAlignment(Pos.CENTER_LEFT);
         if (canRun) {
             Button runSimButton = new Button("Simülasyonu Çalıştır");
             runSimButton.getStyleClass().add(Styles.ACCENT);
-            runSimButton.setOnAction(e -> handleRunSimulation(canEdit));
-            actionBar.getChildren().add(runSimButton);
+
+            ProgressIndicator runProgress = new ProgressIndicator();
+            runProgress.setPrefSize(20, 20);
+            runProgress.setVisible(false);
+            runProgress.setManaged(false);
+
+            runSimButton.setOnAction(e -> handleRunSimulation(canEdit, runSimButton, runProgress));
+            actionBar.getChildren().addAll(runSimButton, runProgress);
         }
         if (canEdit) {
             Button saveParamsButton = new Button("Parametreleri Kaydet");
@@ -463,7 +472,7 @@ public class DashboardView extends BorderPane {
         RunComparisonDialog.show(selectedExperiment, completed, simulationRunService);
     }
 
-    private void handleRunSimulation(boolean canEdit) {
+    private void handleRunSimulation(boolean canEdit, Button runSimButton, ProgressIndicator runProgress) {
         if (selectedExperiment == null) {
             return;
         }
@@ -471,14 +480,51 @@ public class DashboardView extends BorderPane {
             return;
         }
 
-        try {
-            SimulationRun run = simulationRunService.executeExperiment(selectedExperiment.getId());
-            showFeedback("Simülasyon tamamlandı (Run #" + run.getRunNumber() + ").", false);
-            loadRuns(selectedExperiment.getId(), run.getId());
-        } catch (MotusLabException ex) {
-            showFeedback(ex.getMessage(), true);
-            loadRuns(selectedExperiment.getId(), null);
-        }
+        int targetExperimentId = selectedExperiment.getId();
+
+        runSimButton.setDisable(true);
+        runSimButton.setText("Çalıştırılıyor...");
+        runProgress.setVisible(true);
+        runProgress.setManaged(true);
+        clearFeedback();
+
+        Task<SimulationRun> task = new Task<>() {
+            @Override
+            protected SimulationRun call() {
+                return simulationRunService.executeExperiment(targetExperimentId);
+            }
+        };
+
+        task.setOnSucceeded(e -> {
+            SimulationRun run = task.getValue();
+            runSimButton.setDisable(false);
+            runSimButton.setText("Simülasyonu Çalıştır");
+            runProgress.setVisible(false);
+            runProgress.setManaged(false);
+
+            if (selectedExperiment != null && selectedExperiment.getId() == targetExperimentId) {
+                showFeedback("Simülasyon tamamlandı (" + run.getDisplayName() + ").", false);
+                loadRuns(targetExperimentId, run.getId());
+            }
+        });
+
+        task.setOnFailed(e -> {
+            Throwable ex = task.getException();
+            runSimButton.setDisable(false);
+            runSimButton.setText("Simülasyonu Çalıştır");
+            runProgress.setVisible(false);
+            runProgress.setManaged(false);
+
+            if (selectedExperiment != null && selectedExperiment.getId() == targetExperimentId) {
+                String msg = ex != null && ex.getMessage() != null ? ex.getMessage() : "Simülasyon çalıştırılamadı.";
+                showFeedback(msg, true);
+                loadRuns(targetExperimentId, null);
+            }
+        });
+
+        Thread worker = new Thread(task, "motuslab-sim-runner");
+        worker.setDaemon(true);
+        worker.start();
     }
 
     private void handleSaveParameters() {
