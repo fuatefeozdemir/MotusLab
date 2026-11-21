@@ -3,9 +3,9 @@ package com.motuslab.dao;
 import com.motuslab.config.DatabaseConnection;
 import com.motuslab.exception.DataAccessException;
 import com.motuslab.model.RunMetric;
+import com.motuslab.model.RunParameterSnapshot;
 import com.motuslab.model.RunSample;
 import com.motuslab.model.RunStatusHistory;
-import com.motuslab.model.RunParameterSnapshot;
 import com.motuslab.model.SimulationRun;
 import com.motuslab.simulation.SimulationSample;
 
@@ -150,8 +150,8 @@ public class SimulationRunDao {
     public List<SimulationRun> findByExperimentId(int experimentId) {
         String sql = """
                 SELECT sr.id, sr.experiment_id, sr.run_number, sr.name, sr.notes,
-                sr.triggered_by, u.username AS triggered_by_username,
-                sr.status, sr.created_at, sr.started_at, sr.finished_at, sr.error_message
+                       sr.triggered_by, u.username AS triggered_by_username,
+                       sr.status, sr.created_at, sr.started_at, sr.finished_at, sr.error_message
                 FROM simulation_runs sr
                 JOIN users u ON u.id = sr.triggered_by
                 WHERE sr.experiment_id = ?
@@ -176,8 +176,9 @@ public class SimulationRunDao {
 
     public Optional<SimulationRun> findById(int runId) {
         String sql = """
-                SELECT sr.id, sr.experiment_id, sr.run_number, sr.triggered_by, u.username AS triggered_by_username,
-                sr.status, sr.created_at, sr.started_at, sr.finished_at, sr.error_message
+                SELECT sr.id, sr.experiment_id, sr.run_number, sr.name, sr.notes,
+                       sr.triggered_by, u.username AS triggered_by_username,
+                       sr.status, sr.created_at, sr.started_at, sr.finished_at, sr.error_message
                 FROM simulation_runs sr
                 JOIN users u ON u.id = sr.triggered_by
                 WHERE sr.id = ?

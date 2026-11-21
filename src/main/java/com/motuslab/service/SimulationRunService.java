@@ -84,13 +84,13 @@ public class SimulationRunService {
 
             boolean is2D = "PROJECTILE_2D".equals(experiment.getSimulationTypeCode());
             simulationRunDao.saveResultsAndComplete(runId, result.samples(), metrics, is2D);
-
-            return simulationRunDao.findById(runId)
-                    .orElseThrow(() -> new NotFoundException("Çalıştırma kaydı bulunamadı."));
         } catch (RuntimeException ex) {
             simulationRunDao.markFailed(runId, ex.getMessage());
             throw ex;
         }
+
+        return simulationRunDao.findById(runId)
+                .orElseThrow(() -> new NotFoundException("Çalıştırma kaydı bulunamadı."));
     }
 
     public List<SimulationRun> getRunsByExperiment(int experimentId) {
