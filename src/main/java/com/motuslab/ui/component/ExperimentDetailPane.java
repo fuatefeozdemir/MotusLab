@@ -1,6 +1,5 @@
 package com.motuslab.ui.component;
 
-import atlantafx.base.theme.Styles;
 import com.motuslab.model.Experiment;
 import com.motuslab.model.ExperimentParameter;
 import com.motuslab.model.SimulationRun;
@@ -13,7 +12,6 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.ProgressIndicator;
-import javafx.scene.control.Separator;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
@@ -75,16 +73,16 @@ public class ExperimentDetailPane extends VBox {
                 } else {
                     String time = item.getCreatedAt() != null ? item.getCreatedAt().format(DATE_FMT) : "-";
                     Label top = new Label(item.getDisplayName() + " • " + item.getStatus());
-                    top.getStyleClass().add(Styles.TEXT_BOLD);
+                    top.getStyleClass().add("ml-text-bold");
                     if ("FAILED".equals(item.getStatus())) {
-                        top.getStyleClass().add(Styles.DANGER);
+                        top.getStyleClass().add("ml-feedback-error");
                     } else if ("COMPLETED".equals(item.getStatus())) {
-                        top.getStyleClass().add(Styles.SUCCESS);
+                        top.getStyleClass().add("ml-feedback-success");
                     }
-                    Label sub = new Label(time + " • " + item.getTriggeredByUsername());
-                    sub.getStyleClass().add("ml-muted");
+                    Label sub = new Label(time + " • @" + item.getTriggeredByUsername());
+                    sub.getStyleClass().add("ml-text-muted");
                     VBox box = new VBox(2, top, sub);
-                    box.setPadding(new Insets(2, 0, 2, 0));
+                    box.setPadding(new Insets(3, 2, 3, 2));
                     setGraphic(box);
                 }
             }
@@ -102,7 +100,7 @@ public class ExperimentDetailPane extends VBox {
         clearFeedback();
 
         Label emptyLabel = new Label("Bir deney seçin veya sol menüden yeni bir deney oluşturun.");
-        emptyLabel.getStyleClass().add("ml-muted");
+        emptyLabel.getStyleClass().add("ml-text-muted");
         getChildren().add(emptyLabel);
     }
 
@@ -119,23 +117,37 @@ public class ExperimentDetailPane extends VBox {
         boolean canEdit = (isOwner || "EDIT".equals(permission)) && !isArchived;
         boolean canRun = (canEdit || "RUN".equals(permission)) && !isArchived;
 
+        // --- Başlık ---
         Label titleLabel = new Label(experiment.getTitle());
-        titleLabel.getStyleClass().add(Styles.TITLE_2);
+        titleLabel.getStyleClass().add("ml-page-title");
 
-        String metaText = "Model: " + experiment.getSimulationTypeName()
-                + " • Sahip: @" + experiment.getOwnerUsername()
-                + " • Yetkiniz: " + permission
-                + (isArchived ? " • ARŞİVLENDİ" : "");
-        Label simTypeLabel = new Label(metaText);
-        simTypeLabel.getStyleClass().add("ml-muted");
+        HBox titleRow = new HBox(10, titleLabel);
+        titleRow.setAlignment(Pos.CENTER_LEFT);
+        if (isArchived) {
+            Label archiveBadge = new Label("ARŞİVLENDİ");
+            archiveBadge.getStyleClass().add("ml-badge-warning");
+            titleRow.getChildren().add(archiveBadge);
+        }
 
-        VBox headerBox = new VBox(4, titleLabel, simTypeLabel);
+        Label permBadge = new Label(permission);
+        permBadge.getStyleClass().add(isOwner ? "ml-badge-accent" : "ml-badge");
+
+        Label metaLabel = new Label("Model: " + experiment.getSimulationTypeName()
+                + " • Sahip: @" + experiment.getOwnerUsername());
+        metaLabel.getStyleClass().add("ml-text-secondary");
+
+        HBox metaRow = new HBox(8, metaLabel, permBadge);
+        metaRow.setAlignment(Pos.CENTER_LEFT);
+
+        VBox headerBox = new VBox(6, titleRow, metaRow);
         if (experiment.getDescription() != null && !experiment.getDescription().isBlank()) {
             Label descLabel = new Label(experiment.getDescription());
+            descLabel.getStyleClass().add("ml-text-secondary");
             descLabel.setWrapText(true);
             headerBox.getChildren().add(descLabel);
         }
 
+        // --- Parametreler Kartı ---
         Label paramsHeader = new Label("Parametreler");
         paramsHeader.getStyleClass().add("ml-section-title");
 
@@ -151,7 +163,7 @@ public class ExperimentDetailPane extends VBox {
             valueField.setEditable(canEdit);
 
             Label rangeLabel = new Label(formatRange(param.getMinValue(), param.getMaxValue()));
-            rangeLabel.getStyleClass().add("ml-muted");
+            rangeLabel.getStyleClass().add("ml-text-muted");
 
             paramGrid.add(nameLabel, 0, row);
             paramGrid.add(valueField, 1, row);
@@ -166,7 +178,7 @@ public class ExperimentDetailPane extends VBox {
 
         if (canRun) {
             runSimButton = new Button("Simülasyonu Çalıştır");
-            runSimButton.getStyleClass().add(Styles.ACCENT);
+            runSimButton.getStyleClass().add("ml-btn-primary");
 
             runProgress = new ProgressIndicator();
             runProgress.setPrefSize(20, 20);
@@ -178,9 +190,11 @@ public class ExperimentDetailPane extends VBox {
         }
         if (canEdit) {
             Button saveParamsButton = new Button("Parametreleri Kaydet");
+            saveParamsButton.getStyleClass().add("ml-btn-secondary");
             saveParamsButton.setOnAction(e -> actions.onSaveParameters().run());
 
             Button editExpButton = new Button("Deneyi Düzenle");
+            editExpButton.getStyleClass().add("ml-btn-secondary");
             editExpButton.setOnAction(e -> actions.onEditExperiment().run());
 
             actionBar.getChildren().addAll(saveParamsButton, editExpButton);
@@ -188,20 +202,29 @@ public class ExperimentDetailPane extends VBox {
         if (isOwner) {
             if (!isArchived) {
                 Button shareButton = new Button("Paylaş");
+                shareButton.getStyleClass().add("ml-btn-secondary");
                 shareButton.setOnAction(e -> actions.onShareExperiment().run());
                 actionBar.getChildren().add(shareButton);
             }
 
             Button archiveButton = new Button(isArchived ? "Arşivden Çıkar" : "Arşivle");
+            archiveButton.getStyleClass().add("ml-btn-secondary");
             archiveButton.setOnAction(e -> actions.onToggleArchive().accept(!isArchived));
             actionBar.getChildren().add(archiveButton);
 
             Button deleteButton = new Button("Deneyi Sil");
-            deleteButton.getStyleClass().add(Styles.DANGER);
+            deleteButton.getStyleClass().add("ml-btn-danger");
             deleteButton.setOnAction(e -> actions.onDeleteExperiment().run());
             actionBar.getChildren().add(deleteButton);
         }
 
+        VBox paramsCard = new VBox(12, paramsHeader, paramGrid, feedbackLabel);
+        if (!actionBar.getChildren().isEmpty()) {
+            paramsCard.getChildren().add(actionBar);
+        }
+        paramsCard.getStyleClass().add("ml-card");
+
+        // --- Çalıştırma Geçmişi Kartı ---
         Label runsHeader = new Label("Çalıştırma Geçmişi");
         runsHeader.getStyleClass().add("ml-section-title");
 
@@ -209,16 +232,16 @@ public class ExperimentDetailPane extends VBox {
         HBox.setHgrow(runsSpacer, Priority.ALWAYS);
 
         Button compareRunsButton = new Button("Çalıştırmaları Karşılaştır");
+        compareRunsButton.getStyleClass().add("ml-btn-secondary");
         compareRunsButton.setOnAction(e -> actions.onCompareRuns().run());
 
         HBox runsHeaderRow = new HBox(10, runsHeader, runsSpacer, compareRunsButton);
         runsHeaderRow.setAlignment(Pos.CENTER_LEFT);
 
-        getChildren().addAll(headerBox, new Separator(), paramsHeader, paramGrid, feedbackLabel);
-        if (!actionBar.getChildren().isEmpty()) {
-            getChildren().add(actionBar);
-        }
-        getChildren().addAll(new Separator(), runsHeaderRow, runListView, runResultPane);
+        VBox runsCard = new VBox(12, runsHeaderRow, runListView);
+        runsCard.getStyleClass().add("ml-card");
+
+        getChildren().addAll(headerBox, paramsCard, runsCard, runResultPane);
     }
 
     public void setRuns(List<SimulationRun> runs, Integer selectRunId) {

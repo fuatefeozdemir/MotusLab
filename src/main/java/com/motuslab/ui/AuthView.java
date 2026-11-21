@@ -1,28 +1,33 @@
 package com.motuslab.ui;
 
-import atlantafx.base.theme.Styles;
 import com.motuslab.exception.MotusLabException;
 import com.motuslab.model.User;
 import com.motuslab.service.AuthService;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Hyperlink;
 import javafx.scene.control.Label;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 
+import java.io.InputStream;
 import java.util.function.Consumer;
 
 public class AuthView extends VBox {
+
+    private static final String LOGO_FULL = "/images/logo-full.png";
 
     private final AuthService authService;
     private final Consumer<User> onLoginSuccess;
 
     private boolean registerMode = false;
 
-    private final Label titleLabel = new Label("MotusLab");
     private final Label subtitleLabel = new Label("Hesabınıza giriş yapın");
 
     private final TextField identifierField = new TextField();
@@ -49,8 +54,12 @@ public class AuthView extends VBox {
         setAlignment(Pos.CENTER);
         setPadding(new Insets(32));
 
-        titleLabel.getStyleClass().add(Styles.TITLE_2);
-        subtitleLabel.getStyleClass().add("ml-muted");
+        Node brandHeader = createBrandHeader();
+
+        subtitleLabel.getStyleClass().add("ml-text-secondary");
+
+        VBox headerBox = new VBox(8, brandHeader, subtitleLabel);
+        headerBox.setAlignment(Pos.CENTER);
 
         identifierField.setPromptText("Kullanıcı adı veya e-posta");
         usernameField.setPromptText("Kullanıcı adı");
@@ -62,7 +71,7 @@ public class AuthView extends VBox {
         feedbackLabel.setVisible(false);
         feedbackLabel.setManaged(false);
 
-        submitButton.getStyleClass().add(Styles.ACCENT);
+        submitButton.getStyleClass().add("ml-btn-primary");
         submitButton.setMaxWidth(Double.MAX_VALUE);
         submitButton.setDefaultButton(true);
         submitButton.setOnAction(e -> handleSubmit());
@@ -73,12 +82,32 @@ public class AuthView extends VBox {
             renderForm();
         });
 
-        VBox card = new VBox(14, titleLabel, subtitleLabel, formBox, feedbackLabel, submitButton, toggleModeLink);
+        HBox footerBox = new HBox(toggleModeLink);
+        footerBox.setAlignment(Pos.CENTER);
+
+        VBox card = new VBox(16, headerBox, formBox, feedbackLabel, submitButton, footerBox);
         card.setAlignment(Pos.CENTER_LEFT);
-        card.setMaxWidth(360);
+        card.setMaxWidth(380);
         card.getStyleClass().add("ml-auth-card");
 
         getChildren().add(card);
+    }
+
+    private Node createBrandHeader() {
+        try (InputStream is = getClass().getResourceAsStream(LOGO_FULL)) {
+            if (is != null) {
+                ImageView logoView = new ImageView(new Image(is));
+                logoView.setPreserveRatio(true);
+                logoView.setFitHeight(44);
+                logoView.setSmooth(true);
+                return logoView;
+            }
+        } catch (Exception ignored) {
+            // Görsel bulunamazsa metin başlığa düşer.
+        }
+        Label fallback = new Label("MotusLab");
+        fallback.getStyleClass().add("ml-brand-title");
+        return fallback;
     }
 
     private void renderForm() {

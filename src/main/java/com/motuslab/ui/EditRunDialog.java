@@ -3,7 +3,6 @@ package com.motuslab.ui;
 import com.motuslab.exception.MotusLabException;
 import com.motuslab.model.SimulationRun;
 import com.motuslab.service.SimulationRunService;
-import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonBar;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Dialog;
@@ -21,6 +20,7 @@ public final class EditRunDialog {
         Dialog<Boolean> dialog = new Dialog<>();
         dialog.setTitle("Çalıştırmayı Düzenle");
         dialog.setHeaderText("Run #" + run.getRunNumber() + " — Ad ve Notlar");
+        UiHelper.styleDialog(dialog);
 
         ButtonType saveBtnType = new ButtonType("Kaydet", ButtonBar.ButtonData.OK_DONE);
         dialog.getDialogPane().getButtonTypes().addAll(saveBtnType, ButtonType.CANCEL);
@@ -46,11 +46,7 @@ public final class EditRunDialog {
                     simulationRunService.updateRunDetails(run.getId(), nameField.getText(), notesArea.getText());
                     return true;
                 } catch (MotusLabException ex) {
-                    Alert alert = new Alert(Alert.AlertType.ERROR);
-                    alert.setTitle("Hata");
-                    alert.setHeaderText("Çalıştırma güncellenemedi");
-                    alert.setContentText(ex.getMessage());
-                    alert.showAndWait();
+                    UiHelper.showError("Çalıştırma güncellenemedi", ex.getMessage());
                     return false;
                 }
             }

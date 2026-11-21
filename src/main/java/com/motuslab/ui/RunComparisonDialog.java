@@ -1,6 +1,5 @@
 package com.motuslab.ui;
 
-import atlantafx.base.theme.Styles;
 import com.motuslab.exception.MotusLabException;
 import com.motuslab.model.Experiment;
 import com.motuslab.model.RunMetric;
@@ -52,6 +51,7 @@ public final class RunComparisonDialog {
         dialog.setHeaderText(experiment.getTitle() + " — İki Çalıştırmayı Karşılaştır");
         dialog.getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
         dialog.setResizable(true);
+        UiHelper.styleDialog(dialog);
 
         ComboBox<SimulationRun> runABox = createRunComboBox(completedRuns);
         ComboBox<SimulationRun> runBBox = createRunComboBox(completedRuns);
@@ -59,18 +59,16 @@ public final class RunComparisonDialog {
         runBBox.getSelectionModel().select(1);
 
         Button compareBtn = new Button("Karşılaştır");
-        compareBtn.getStyleClass().add(Styles.ACCENT);
+        compareBtn.getStyleClass().add("ml-btn-primary");
 
         Label feedback = new Label();
         feedback.setWrapText(true);
-        feedback.setVisible(false);
-        feedback.setManaged(false);
+        UiHelper.clearFeedback(feedback);
 
         VBox resultBox = new VBox(16);
 
         Runnable doCompare = () -> {
-            feedback.setVisible(false);
-            feedback.setManaged(false);
+            UiHelper.clearFeedback(feedback);
             resultBox.getChildren().clear();
 
             SimulationRun runA = runABox.getValue();
@@ -79,10 +77,7 @@ public final class RunComparisonDialog {
                 return;
             }
             if (runA.getId() == runB.getId()) {
-                feedback.setText("Karşılaştırma için iki farklı çalıştırma seçin.");
-                feedback.getStyleClass().setAll(Styles.DANGER);
-                feedback.setVisible(true);
-                feedback.setManaged(true);
+                UiHelper.setFeedback(feedback, "Karşılaştırma için iki farklı çalıştırma seçin.", true);
                 return;
             }
 
@@ -92,8 +87,8 @@ public final class RunComparisonDialog {
                 List<RunSample> samplesA = downsample(simulationRunService.getSamplesByRun(runA.getId()), MAX_CHART_POINTS);
                 List<RunSample> samplesB = downsample(simulationRunService.getSamplesByRun(runB.getId()), MAX_CHART_POINTS);
 
-                String labelA = "Run #" + runA.getDisplayName();
-                String labelB = "Run #" + runB.getDisplayName();
+                String labelA = runA.getDisplayName();
+                String labelB = runB.getDisplayName();
 
                 GridPane metricsGrid = buildMetricsGrid(labelA, labelB, metricsA, metricsB);
 
@@ -130,14 +125,11 @@ public final class RunComparisonDialog {
                 }
 
                 Label tableTitle = new Label("Metrik Karşılaştırması");
-                tableTitle.getStyleClass().add(Styles.TITLE_4);
+                tableTitle.getStyleClass().add("ml-section-title");
 
                 resultBox.getChildren().addAll(tableTitle, metricsGrid, chartsBox);
             } catch (MotusLabException ex) {
-                feedback.setText(ex.getMessage());
-                feedback.getStyleClass().setAll(Styles.DANGER);
-                feedback.setVisible(true);
-                feedback.setManaged(true);
+                UiHelper.setFeedback(feedback, ex.getMessage(), true);
             }
         };
 
@@ -156,6 +148,7 @@ public final class RunComparisonDialog {
         ScrollPane scrollPane = new ScrollPane(content);
         scrollPane.setFitToWidth(true);
         scrollPane.setPrefSize(960, 620);
+        scrollPane.getStyleClass().add("ml-scroll-pane");
 
         dialog.getDialogPane().setContent(scrollPane);
 
@@ -204,17 +197,16 @@ public final class RunComparisonDialog {
         GridPane grid = new GridPane();
         grid.setHgap(24);
         grid.setVgap(8);
-        grid.setPadding(new Insets(8, 12, 8, 12));
-        grid.setStyle("-fx-border-color: -color-border-default; -fx-border-radius: 6;");
+        grid.getStyleClass().add("ml-info-box");
 
         Label hMetric = new Label("Metrik");
         Label hA = new Label(labelA);
         Label hB = new Label(labelB);
         Label hDiff = new Label("Fark (B - A)");
-        hMetric.getStyleClass().add(Styles.TEXT_BOLD);
-        hA.getStyleClass().add(Styles.TEXT_BOLD);
-        hB.getStyleClass().add(Styles.TEXT_BOLD);
-        hDiff.getStyleClass().add(Styles.TEXT_BOLD);
+        hMetric.getStyleClass().add("ml-text-bold");
+        hA.getStyleClass().add("ml-text-bold");
+        hB.getStyleClass().add("ml-text-bold");
+        hDiff.getStyleClass().add("ml-text-bold");
 
         grid.addRow(0, hMetric, hA, hB, hDiff);
 

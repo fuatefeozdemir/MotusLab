@@ -11,13 +11,16 @@ import com.motuslab.ui.DashboardView;
 import javafx.application.Application;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.image.Image;
 import javafx.stage.Stage;
 
+import java.io.InputStream;
 import java.util.Objects;
 
 public class MainApp extends Application {
 
     private static final String APP_STYLESHEET = "/css/motuslab.css";
+    private static final String APP_ICON = "/images/logo-icon.png";
 
     private final AuthService authService = new AuthService();
     private final ExperimentService experimentService = new ExperimentService();
@@ -31,13 +34,27 @@ public class MainApp extends Application {
         Application.setUserAgentStylesheet(new PrimerLight().getUserAgentStylesheet());
 
         primaryStage.setTitle("MotusLab");
+        loadAppIcon();
         showAuthView();
         primaryStage.show();
     }
 
+    private void loadAppIcon() {
+        try (InputStream is = getClass().getResourceAsStream(APP_ICON)) {
+            if (is != null) {
+                primaryStage.getIcons().add(new Image(is));
+            }
+        } catch (Exception ignored) {
+            // İkon yüklenemezse uygulama varsayılan ikonla açılır.
+        }
+    }
+
     private void showAuthView() {
         AuthView authView = new AuthView(authService, this::showDashboard);
-        primaryStage.setScene(createScene(authView, 480, 520));
+        primaryStage.setMinWidth(440);
+        primaryStage.setMinHeight(520);
+        primaryStage.setScene(createScene(authView, 480, 560));
+        primaryStage.centerOnScreen();
     }
 
     private void showDashboard(User user) {
@@ -51,7 +68,10 @@ public class MainApp extends Application {
                     showAuthView();
                 }
         );
-        primaryStage.setScene(createScene(dashboardView, 1180, 760));
+        primaryStage.setMinWidth(960);
+        primaryStage.setMinHeight(640);
+        primaryStage.setScene(createScene(dashboardView, 1200, 780));
+        primaryStage.centerOnScreen();
     }
 
     private Scene createScene(Parent root, double width, double height) {

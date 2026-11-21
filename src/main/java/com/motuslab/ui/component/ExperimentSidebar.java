@@ -1,12 +1,12 @@
 package com.motuslab.ui.component;
 
-import atlantafx.base.theme.Styles;
 import com.motuslab.model.Experiment;
 import com.motuslab.model.User;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
 import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
@@ -50,7 +50,7 @@ public class ExperimentSidebar extends VBox {
         headerLabel.getStyleClass().add("ml-section-title");
 
         Button newExpButton = new Button("+ Yeni Deney");
-        newExpButton.getStyleClass().add(Styles.ACCENT);
+        newExpButton.getStyleClass().add("ml-btn-primary");
         newExpButton.setMaxWidth(Double.MAX_VALUE);
         newExpButton.setOnAction(e -> onNewExperiment.run());
 
@@ -82,19 +82,26 @@ public class ExperimentSidebar extends VBox {
                     setText(null);
                     setGraphic(null);
                 } else {
-                    String titleText = item.isArchived() ? "[Arşiv] " + item.getTitle() : item.getTitle();
-                    Label title = new Label(titleText);
-                    title.getStyleClass().add(Styles.TEXT_BOLD);
+                    Label title = new Label(item.getTitle());
+                    title.getStyleClass().add("ml-text-bold");
+
+                    HBox titleRow = new HBox(6, title);
+                    titleRow.setAlignment(Pos.CENTER_LEFT);
+                    if (item.isArchived()) {
+                        Label archiveBadge = new Label("Arşiv");
+                        archiveBadge.getStyleClass().add("ml-badge-warning");
+                        titleRow.getChildren().add(archiveBadge);
+                    }
 
                     String subtitle = item.getSimulationTypeName();
                     if (item.getOwnerId() != currentUser.getId()) {
                         subtitle += " • @" + item.getOwnerUsername();
                     }
                     Label type = new Label(subtitle);
-                    type.getStyleClass().add("ml-muted");
+                    type.getStyleClass().add("ml-text-secondary");
 
-                    VBox box = new VBox(2, title, type);
-                    box.setPadding(new Insets(4, 0, 4, 0));
+                    VBox box = new VBox(3, titleRow, type);
+                    box.setPadding(new Insets(4, 2, 4, 2));
                     setGraphic(box);
                 }
             }

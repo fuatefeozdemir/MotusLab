@@ -1,6 +1,5 @@
 package com.motuslab.ui;
 
-import atlantafx.base.theme.Styles;
 import com.motuslab.exception.MotusLabException;
 import com.motuslab.model.Experiment;
 import com.motuslab.model.ExperimentMember;
@@ -33,11 +32,11 @@ public final class ShareExperimentDialog {
         dialog.setTitle("Deneyi Paylaş");
         dialog.setHeaderText(experiment.getTitle() + " — Üye Yönetimi");
         dialog.getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
+        UiHelper.styleDialog(dialog);
 
         Label feedback = new Label();
         feedback.setWrapText(true);
-        feedback.setVisible(false);
-        feedback.setManaged(false);
+        UiHelper.clearFeedback(feedback);
 
         ListView<ExperimentMember> memberListView = new ListView<>();
         memberListView.setPrefHeight(200);
@@ -47,7 +46,7 @@ public final class ShareExperimentDialog {
                 List<ExperimentMember> members = memberService.getMembers(experiment.getId());
                 memberListView.setItems(FXCollections.observableArrayList(members));
             } catch (MotusLabException ex) {
-                setFeedback(feedback, ex.getMessage(), true);
+                UiHelper.setFeedback(feedback, ex.getMessage(), true);
             }
         };
 
@@ -60,27 +59,27 @@ public final class ShareExperimentDialog {
                     setGraphic(null);
                 } else {
                     Label userLabel = new Label("@" + item.getUsername());
-                    userLabel.getStyleClass().add(Styles.TEXT_BOLD);
+                    userLabel.getStyleClass().add("ml-text-bold");
 
-                    Label permLabel = new Label(item.getPermission());
-                    permLabel.getStyleClass().add(Styles.TEXT_MUTED);
+                    Label permBadge = new Label(item.getPermission());
+                    permBadge.getStyleClass().add("ml-badge");
 
                     Region spacer = new Region();
                     HBox.setHgrow(spacer, Priority.ALWAYS);
 
                     Button removeBtn = new Button("Çıkar");
-                    removeBtn.getStyleClass().add(Styles.DANGER);
+                    removeBtn.getStyleClass().add("ml-btn-danger");
                     removeBtn.setOnAction(e -> {
                         try {
                             memberService.removeMember(experiment.getId(), item.getUserId());
-                            setFeedback(feedback, "@" + item.getUsername() + " çıkarıldı.", false);
+                            UiHelper.setFeedback(feedback, "@" + item.getUsername() + " çıkarıldı.", false);
                             refreshMembers.run();
                         } catch (MotusLabException ex) {
-                            setFeedback(feedback, ex.getMessage(), true);
+                            UiHelper.setFeedback(feedback, ex.getMessage(), true);
                         }
                     });
 
-                    HBox row = new HBox(10, userLabel, permLabel, spacer, removeBtn);
+                    HBox row = new HBox(10, userLabel, permBadge, spacer, removeBtn);
                     row.setAlignment(Pos.CENTER_LEFT);
                     setGraphic(row);
                 }
@@ -95,7 +94,7 @@ public final class ShareExperimentDialog {
         permBox.getSelectionModel().select("VIEW");
 
         Button addBtn = new Button("Ekle / Güncelle");
-        addBtn.getStyleClass().add(Styles.ACCENT);
+        addBtn.getStyleClass().add("ml-btn-primary");
         addBtn.setOnAction(e -> {
             try {
                 memberService.addOrUpdateMember(
@@ -104,35 +103,26 @@ public final class ShareExperimentDialog {
                         permBox.getValue()
                 );
                 usernameField.clear();
-                setFeedback(feedback, "Üye yetkisi kaydedildi.", false);
+                UiHelper.setFeedback(feedback, "Üye yetkisi kaydedildi.", false);
                 refreshMembers.run();
             } catch (MotusLabException ex) {
-                setFeedback(feedback, ex.getMessage(), true);
+                UiHelper.setFeedback(feedback, ex.getMessage(), true);
             }
         });
 
         HBox addRow = new HBox(8, usernameField, permBox, addBtn);
         addRow.setAlignment(Pos.CENTER_LEFT);
 
-        VBox content = new VBox(12,
-                new Label("Yeni Üye Ekle veya Yetki Güncelle"),
-                addRow,
-                feedback,
-                new Separator(),
-                new Label("Mevcut Üyeler"),
-                memberListView
-        );
+        Label addTitle = new Label("Yeni Üye Ekle veya Yetki Güncelle");
+        addTitle.getStyleClass().add("ml-text-bold");
+        Label listTitle = new Label("Mevcut Üyeler");
+        listTitle.getStyleClass().add("ml-text-bold");
+
+        VBox content = new VBox(12, addTitle, addRow, feedback, new Separator(), listTitle, memberListView);
         content.setPrefWidth(460);
         dialog.getDialogPane().setContent(content);
 
         refreshMembers.run();
         dialog.showAndWait();
-    }
-
-    private static void setFeedback(Label label, String msg, boolean isError) {
-        label.setText(msg);
-        label.getStyleClass().setAll(isError ? Styles.DANGER : Styles.SUCCESS);
-        label.setVisible(true);
-        label.setManaged(true);
     }
 }

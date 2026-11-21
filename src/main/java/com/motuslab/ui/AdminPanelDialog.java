@@ -1,6 +1,5 @@
 package com.motuslab.ui;
 
-import atlantafx.base.theme.Styles;
 import com.motuslab.exception.MotusLabException;
 import com.motuslab.model.User;
 import com.motuslab.service.AdminService;
@@ -34,6 +33,7 @@ public final class AdminPanelDialog {
         dialog.setTitle("Admin Paneli");
         dialog.setHeaderText("Kullanıcı Yönetimi");
         dialog.getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
+        UiHelper.styleDialog(dialog);
 
         TableView<User> table = new TableView<>();
         table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
@@ -69,9 +69,12 @@ public final class AdminPanelDialog {
         roleBox.setPrefWidth(150);
 
         Button updateRoleBtn = new Button("Rolü Güncelle");
+        updateRoleBtn.getStyleClass().add("ml-btn-secondary");
+
         Button toggleActiveBtn = new Button("Pasife Al");
         Label feedbackLabel = new Label();
         feedbackLabel.setWrapText(true);
+        UiHelper.clearFeedback(feedbackLabel);
 
         Runnable reloadUsers = () -> {
             User prevSelected = table.getSelectionModel().getSelectedItem();
@@ -86,14 +89,14 @@ public final class AdminPanelDialog {
                             .ifPresent(u -> table.getSelectionModel().select(u));
                 }
             } catch (MotusLabException ex) {
-                setFeedback(feedbackLabel, ex.getMessage(), true);
+                UiHelper.setFeedback(feedbackLabel, ex.getMessage(), true);
             }
         };
 
         try {
             roleBox.setItems(FXCollections.observableArrayList(adminService.getAllRoleNames()));
         } catch (MotusLabException ex) {
-            setFeedback(feedbackLabel, ex.getMessage(), true);
+            UiHelper.setFeedback(feedbackLabel, ex.getMessage(), true);
         }
 
         Runnable syncControls = () -> {
@@ -108,8 +111,8 @@ public final class AdminPanelDialog {
             if (!none) {
                 roleBox.getSelectionModel().select(selected.getRoleName());
                 toggleActiveBtn.setText(selected.isActive() ? "Pasife Al" : "Aktif Et");
-                toggleActiveBtn.getStyleClass().removeAll(Styles.DANGER, Styles.SUCCESS);
-                toggleActiveBtn.getStyleClass().add(selected.isActive() ? Styles.DANGER : Styles.SUCCESS);
+                toggleActiveBtn.getStyleClass().removeAll("ml-btn-danger", "ml-btn-primary");
+                toggleActiveBtn.getStyleClass().add(selected.isActive() ? "ml-btn-danger" : "ml-btn-primary");
             }
         };
 
@@ -122,11 +125,11 @@ public final class AdminPanelDialog {
             }
             try {
                 adminService.changeUserRole(selected.getId(), roleBox.getValue());
-                setFeedback(feedbackLabel, selected.getUsername() + " kullanıcısının rolü güncellendi.", false);
+                UiHelper.setFeedback(feedbackLabel, selected.getUsername() + " kullanıcısının rolü güncellendi.", false);
                 reloadUsers.run();
                 syncControls.run();
             } catch (MotusLabException ex) {
-                setFeedback(feedbackLabel, ex.getMessage(), true);
+                UiHelper.setFeedback(feedbackLabel, ex.getMessage(), true);
             }
         });
 
@@ -138,11 +141,11 @@ public final class AdminPanelDialog {
             boolean targetActive = !selected.isActive();
             try {
                 adminService.setUserActive(selected.getId(), targetActive);
-                setFeedback(feedbackLabel, selected.getUsername() + (targetActive ? " aktif edildi." : " pasife alındı."), false);
+                UiHelper.setFeedback(feedbackLabel, selected.getUsername() + (targetActive ? " aktif edildi." : " pasife alındı."), false);
                 reloadUsers.run();
                 syncControls.run();
             } catch (MotusLabException ex) {
-                setFeedback(feedbackLabel, ex.getMessage(), true);
+                UiHelper.setFeedback(feedbackLabel, ex.getMessage(), true);
             }
         });
 
@@ -159,11 +162,5 @@ public final class AdminPanelDialog {
         reloadUsers.run();
         syncControls.run();
         dialog.showAndWait();
-    }
-
-    private static void setFeedback(Label label, String text, boolean isError) {
-        label.setText(text);
-        label.getStyleClass().removeAll(Styles.DANGER, Styles.SUCCESS);
-        label.getStyleClass().add(isError ? Styles.DANGER : Styles.SUCCESS);
     }
 }

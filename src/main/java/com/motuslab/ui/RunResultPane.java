@@ -1,6 +1,5 @@
 package com.motuslab.ui;
 
-import atlantafx.base.theme.Styles;
 import com.motuslab.exception.MotusLabException;
 import com.motuslab.model.Experiment;
 import com.motuslab.model.RunMetric;
@@ -14,11 +13,8 @@ import javafx.geometry.Pos;
 import javafx.scene.chart.LineChart;
 import javafx.scene.chart.NumberAxis;
 import javafx.scene.chart.XYChart;
-import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
-import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
-import javafx.scene.control.Separator;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
@@ -64,7 +60,7 @@ public class RunResultPane extends VBox {
 
         if (run == null) {
             Label empty = new Label("Henüz bir çalıştırma kaydı yok.");
-            empty.getStyleClass().add("ml-muted");
+            empty.getStyleClass().add("ml-text-muted");
             getChildren().add(empty);
             return;
         }
@@ -96,12 +92,14 @@ public class RunResultPane extends VBox {
             List<RunMetric> finalMetrics = metrics;
             List<RunSample> finalSamples = samples;
             Button exportCsvBtn = new Button("CSV Dışa Aktar");
+            exportCsvBtn.getStyleClass().add("ml-btn-secondary");
             exportCsvBtn.setOnAction(e -> handleExportCsv(experiment, run, finalMetrics, finalSamples));
             headerRow.getChildren().add(exportCsvBtn);
         }
 
         if (canManage) {
             Button editBtn = new Button("Düzenle");
+            editBtn.getStyleClass().add("ml-btn-secondary");
             editBtn.setOnAction(e -> {
                 if (EditRunDialog.show(run, simulationRunService)) {
                     feedbackCallback.accept("Çalıştırma bilgileri güncellendi.", false);
@@ -110,7 +108,7 @@ public class RunResultPane extends VBox {
             });
 
             Button deleteBtn = new Button("Sil");
-            deleteBtn.getStyleClass().add(Styles.DANGER);
+            deleteBtn.getStyleClass().add("ml-btn-danger");
             deleteBtn.setOnAction(e -> handleDeleteRun(run));
 
             headerRow.getChildren().addAll(editBtn, deleteBtn);
@@ -120,8 +118,9 @@ public class RunResultPane extends VBox {
 
         if (run.getNotes() != null && !run.getNotes().isBlank()) {
             Label notesTitle = new Label("Notlar");
-            notesTitle.getStyleClass().add(Styles.TEXT_BOLD);
+            notesTitle.getStyleClass().add("ml-text-bold");
             Label notesBody = new Label(run.getNotes());
+            notesBody.getStyleClass().add("ml-text-secondary");
             notesBody.setWrapText(true);
 
             VBox notesBox = new VBox(4, notesTitle, notesBody);
@@ -141,7 +140,7 @@ public class RunResultPane extends VBox {
 
         if (!isCompleted) {
             Label statusLabel = new Label("Durum: " + run.getStatus());
-            statusLabel.getStyleClass().add("ml-muted");
+            statusLabel.getStyleClass().add("ml-text-muted");
             getChildren().add(statusLabel);
             renderAuditSection(run);
             return;
@@ -153,10 +152,10 @@ public class RunResultPane extends VBox {
             card.getStyleClass().add("ml-metric-card");
 
             Label name = new Label(formatMetricName(m.getMetricCode()));
-            name.getStyleClass().add("ml-muted");
+            name.getStyleClass().add("ml-text-muted");
 
             Label val = new Label(String.format(Locale.US, "%.3f %s", m.getMetricValue(), m.getUnit()));
-            val.getStyleClass().add(Styles.TITLE_4);
+            val.getStyleClass().add("ml-metric-value");
 
             card.getChildren().addAll(name, val);
             metricsPane.getChildren().add(card);
@@ -197,22 +196,20 @@ public class RunResultPane extends VBox {
     }
 
     private void handleDeleteRun(SimulationRun run) {
-        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
-        confirm.setTitle("Çalıştırmayı Sil");
-        confirm.setHeaderText(run.getDisplayName());
-        confirm.setContentText("Bu çalıştırma ve tüm sonuç verileri kalıcı olarak silinecek. Emin misiniz?");
-
-        confirm.showAndWait().ifPresent(result -> {
-            if (result == ButtonType.OK) {
-                try {
-                    simulationRunService.deleteRun(run.getId());
-                    feedbackCallback.accept(run.getDisplayName() + " silindi.", false);
-                    onRunsChanged.accept(null);
-                } catch (MotusLabException ex) {
-                    feedbackCallback.accept(ex.getMessage(), true);
-                }
+        boolean confirmed = UiHelper.showConfirm(
+                "Çalıştırmayı Sil",
+                run.getDisplayName(),
+                "Bu çalıştırma ve tüm sonuç verileri kalıcı olarak silinecek. Emin misiniz?"
+        );
+        if (confirmed) {
+            try {
+                simulationRunService.deleteRun(run.getId());
+                feedbackCallback.accept(run.getDisplayName() + " silindi.", false);
+                onRunsChanged.accept(null);
+            } catch (MotusLabException ex) {
+                feedbackCallback.accept(ex.getMessage(), true);
             }
-        });
+        }
     }
 
     private void renderAuditSection(SimulationRun run) {
@@ -223,7 +220,7 @@ public class RunResultPane extends VBox {
             VBox snapshotBox = new VBox(8);
             snapshotBox.getStyleClass().add("ml-info-box");
             Label snapTitle = new Label("Kullanılan Parametreler (Snapshot)");
-            snapTitle.getStyleClass().add(Styles.TEXT_BOLD);
+            snapTitle.getStyleClass().add("ml-text-bold");
 
             GridPane snapGrid = new GridPane();
             snapGrid.setHgap(16);
@@ -231,7 +228,7 @@ public class RunResultPane extends VBox {
             int sRow = 0;
             for (RunParameterSnapshot snap : snapshots) {
                 Label name = new Label(snap.getParameterName());
-                name.getStyleClass().add("ml-muted");
+                name.getStyleClass().add("ml-text-secondary");
                 Label val = new Label(String.format(Locale.US, "%s %s", snap.getValue(), snap.getUnit()));
                 snapGrid.addRow(sRow++, name, val);
             }
@@ -240,7 +237,7 @@ public class RunResultPane extends VBox {
             VBox historyBox = new VBox(8);
             historyBox.getStyleClass().add("ml-info-box");
             Label histTitle = new Label("Durum Geçmişi");
-            histTitle.getStyleClass().add(Styles.TEXT_BOLD);
+            histTitle.getStyleClass().add("ml-text-bold");
 
             GridPane histGrid = new GridPane();
             histGrid.setHgap(16);
@@ -251,7 +248,7 @@ public class RunResultPane extends VBox {
                 String time = h.getChangedAt() != null ? h.getChangedAt().format(TIME_FMT) : "-";
                 Label transLabel = new Label(transition);
                 Label timeLabel = new Label(time);
-                timeLabel.getStyleClass().add("ml-muted");
+                timeLabel.getStyleClass().add("ml-text-muted");
                 histGrid.addRow(hRow++, transLabel, timeLabel);
             }
             historyBox.getChildren().addAll(histTitle, histGrid);
@@ -260,7 +257,7 @@ public class RunResultPane extends VBox {
             HBox.setHgrow(historyBox, Priority.ALWAYS);
             HBox auditRow = new HBox(16, snapshotBox, historyBox);
 
-            getChildren().addAll(new Separator(), auditRow);
+            getChildren().add(auditRow);
         } catch (MotusLabException ex) {
             feedbackCallback.accept(ex.getMessage(), true);
         }

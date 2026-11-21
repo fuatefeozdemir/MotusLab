@@ -3,7 +3,6 @@ package com.motuslab.ui;
 import com.motuslab.exception.MotusLabException;
 import com.motuslab.model.Experiment;
 import com.motuslab.service.ExperimentService;
-import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonBar;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Dialog;
@@ -21,6 +20,7 @@ public final class EditExperimentDialog {
         Dialog<Boolean> dialog = new Dialog<>();
         dialog.setTitle("Deneyi Düzenle");
         dialog.setHeaderText("Deney başlığını ve açıklamasını güncelleyin");
+        UiHelper.styleDialog(dialog);
 
         ButtonType saveBtnType = new ButtonType("Kaydet", ButtonBar.ButtonData.OK_DONE);
         dialog.getDialogPane().getButtonTypes().addAll(saveBtnType, ButtonType.CANCEL);
@@ -50,11 +50,7 @@ public final class EditExperimentDialog {
                     );
                     return true;
                 } catch (MotusLabException ex) {
-                    Alert alert = new Alert(Alert.AlertType.ERROR);
-                    alert.setTitle("Hata");
-                    alert.setHeaderText("Deney güncellenemedi");
-                    alert.setContentText(ex.getMessage());
-                    alert.showAndWait();
+                    UiHelper.showError("Deney güncellenemedi", ex.getMessage());
                     return false;
                 }
             }

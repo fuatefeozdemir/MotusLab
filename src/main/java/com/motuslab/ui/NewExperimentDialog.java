@@ -5,7 +5,6 @@ import com.motuslab.model.Experiment;
 import com.motuslab.model.SimulationType;
 import com.motuslab.service.ExperimentService;
 import javafx.collections.FXCollections;
-import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonBar;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.ComboBox;
@@ -28,13 +27,14 @@ public final class NewExperimentDialog {
         try {
             simTypes = experimentService.getAllSimulationTypes();
         } catch (MotusLabException ex) {
-            showError("Simülasyon türleri alınamadı", ex.getMessage());
+            UiHelper.showError("Simülasyon türleri alınamadı", ex.getMessage());
             return Optional.empty();
         }
 
         Dialog<Experiment> dialog = new Dialog<>();
         dialog.setTitle("Yeni Deney Oluştur");
         dialog.setHeaderText("Deney bilgilerini girin");
+        UiHelper.styleDialog(dialog);
 
         ButtonType createBtnType = new ButtonType("Oluştur", ButtonBar.ButtonData.OK_DONE);
         dialog.getDialogPane().getButtonTypes().addAll(createBtnType, ButtonType.CANCEL);
@@ -74,7 +74,7 @@ public final class NewExperimentDialog {
                             null
                     );
                 } catch (MotusLabException ex) {
-                    showError("Deney oluşturulamadı", ex.getMessage());
+                    UiHelper.showError("Deney oluşturulamadı", ex.getMessage());
                     return null;
                 }
             }
@@ -82,13 +82,5 @@ public final class NewExperimentDialog {
         });
 
         return dialog.showAndWait();
-    }
-
-    private static void showError(String header, String message) {
-        Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle("Hata");
-        alert.setHeaderText(header);
-        alert.setContentText(message);
-        alert.showAndWait();
     }
 }

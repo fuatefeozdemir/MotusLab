@@ -1,5 +1,5 @@
 /* =========================================
-   MotusLab — Temel Tasarım Sistemi
+   MotusLab — Tasarım Sistemi (Tam Sürüm)
    ========================================= */
 
 .root {
@@ -42,7 +42,7 @@
     -ml-series-7:           #202D3E;
     -ml-series-8:           #B9A7C9;
 
-    /* Semantik Eşlemeler */
+    /* Semantik */
     -ml-accent:             -ml-magenta;
     -ml-accent-hover:       -ml-burgundy;
     -ml-success:            -ml-eucalyptus;
@@ -87,12 +87,27 @@
     -fx-background-color:   -ml-surface-elevated;
     -fx-border-color:       transparent -ml-border transparent transparent;
     -fx-border-width:       0 1 0 0;
-    -fx-padding:            14;
+    -fx-padding:            16;
 }
 
 .ml-detail-pane {
     -fx-background-color:   -ml-bg;
-    -fx-padding:            20;
+    -fx-padding:            24;
+}
+
+.ml-scroll-pane,
+.ml-scroll-pane > .viewport {
+    -fx-background-color:   transparent;
+}
+
+/* --- Kartlar ve Kutular --- */
+.ml-auth-card {
+    -fx-background-color:   -ml-surface;
+    -fx-border-color:       -ml-border;
+    -fx-border-width:       1;
+    -fx-border-radius:      10;
+    -fx-background-radius:  10;
+    -fx-padding:            28;
 }
 
 .ml-card {
@@ -113,15 +128,50 @@
     -fx-padding:            12;
 }
 
-/* --- Tipografi ve Durum Metinleri --- */
+.ml-metric-card {
+    -fx-background-color:   -ml-surface;
+    -fx-border-color:       -ml-border;
+    -fx-border-width:       1;
+    -fx-border-radius:      8;
+    -fx-background-radius:  8;
+    -fx-padding:            12 16 12 16;
+}
+
+.ml-info-box {
+    -fx-background-color:   -ml-surface;
+    -fx-border-color:       -ml-border;
+    -fx-border-width:       1;
+    -fx-border-radius:      8;
+    -fx-background-radius:  8;
+    -fx-padding:            14;
+}
+
+/* --- Tipografi --- */
 .ml-brand-title {
     -fx-font-size:          18px;
     -fx-font-weight:        bold;
     -fx-text-fill:          -ml-navy;
 }
 
+.ml-page-title {
+    -fx-font-size:          22px;
+    -fx-font-weight:        bold;
+    -fx-text-fill:          -ml-navy;
+}
+
 .ml-section-title {
     -fx-font-size:          15px;
+    -fx-font-weight:        bold;
+    -fx-text-fill:          -ml-text-primary;
+}
+
+.ml-metric-value {
+    -fx-font-size:          17px;
+    -fx-font-weight:        bold;
+    -fx-text-fill:          -ml-navy;
+}
+
+.ml-text-bold {
     -fx-font-weight:        bold;
     -fx-text-fill:          -ml-text-primary;
 }
@@ -134,26 +184,56 @@
     -fx-text-fill:          -ml-text-muted;
 }
 
+/* --- Rozetler (Badges) --- */
+.ml-badge {
+    -fx-background-color:   -ml-surface-muted;
+    -fx-text-fill:          -ml-text-secondary;
+    -fx-background-radius:  12;
+    -fx-padding:            3 10 3 10;
+    -fx-font-size:          12px;
+    -fx-font-weight:        bold;
+}
+
+.ml-badge-accent {
+    -fx-background-color:   -ml-hover;
+    -fx-text-fill:          -ml-magenta;
+    -fx-background-radius:  12;
+    -fx-padding:            3 10 3 10;
+    -fx-font-size:          12px;
+    -fx-font-weight:        bold;
+}
+
+.ml-badge-warning {
+    -fx-background-color:   rgba(215, 169, 79, 0.18);
+    -fx-text-fill:          -ml-navy;
+    -fx-background-radius:  12;
+    -fx-padding:            3 10 3 10;
+    -fx-font-size:          12px;
+    -fx-font-weight:        bold;
+}
+
+/* --- Geri Bildirim --- */
 .ml-feedback-error {
     -fx-text-fill:          -ml-danger;
     -fx-font-weight:        bold;
 }
 
 .ml-feedback-success {
-    -fx-text-fill:          -ml-eucalyptus;
+    -fx-text-fill:          -ml-success;
     -fx-font-weight:        bold;
 }
 
 .ml-feedback-warning {
-    -fx-text-fill:          -ml-amber;
+    -fx-text-fill:          -ml-warning;
     -fx-font-weight:        bold;
 }
 
-/* --- Buton ve Liste Etkileşimleri --- */
+/* --- Butonlar --- */
 .ml-btn-primary {
     -fx-background-color:   -ml-accent;
     -fx-text-fill:          -ml-surface;
     -fx-background-radius:  6;
+    -fx-font-weight:        bold;
     -fx-cursor:             hand;
 }
 
@@ -166,17 +246,72 @@
     -fx-text-fill:          -ml-surface;
 }
 
+.ml-btn-secondary {
+    -fx-background-color:   -ml-surface;
+    -fx-text-fill:          -ml-text-primary;
+    -fx-border-color:       -ml-border;
+    -fx-border-width:       1;
+    -fx-border-radius:      6;
+    -fx-background-radius:  6;
+    -fx-cursor:             hand;
+}
+
+.ml-btn-secondary:hover {
+    -fx-background-color:   -ml-hover;
+}
+
+.ml-btn-danger {
+    -fx-background-color:   -ml-surface;
+    -fx-text-fill:          -ml-danger;
+    -fx-border-color:       -ml-danger;
+    -fx-border-width:       1;
+    -fx-border-radius:      6;
+    -fx-background-radius:  6;
+    -fx-cursor:             hand;
+}
+
+.ml-btn-danger:hover {
+    -fx-background-color:   -ml-danger;
+    -fx-text-fill:          -ml-surface;
+}
+
+/* --- Liste ve Dialoglar --- */
+.list-view {
+    -fx-background-color:   -ml-surface;
+    -fx-border-color:       -ml-border;
+    -fx-border-radius:      6;
+    -fx-background-radius:  6;
+}
+
+/* noinspection CssInvalidPseudoSelector */
 .list-cell:filled:hover {
     -fx-background-color:   -ml-hover;
 }
 
+/* noinspection CssInvalidPseudoSelector */
 .list-cell:filled:selected,
 .list-cell:filled:selected:hover {
     -fx-background-color:   -ml-bg-secondary;
     -fx-text-fill:          -ml-text-primary;
 }
 
+.dialog-pane {
+    -fx-background-color:   -ml-bg;
+}
+
 /* --- Grafik Serileri --- */
+.chart {
+    -fx-background-color:   -ml-surface;
+    -fx-border-color:       -ml-border;
+    -fx-border-radius:      8;
+    -fx-background-radius:  8;
+    -fx-padding:            10;
+}
+
+.chart-plot-background {
+    -fx-background-color:   -ml-surface-elevated;
+}
+
 .default-color0.chart-series-line { -fx-stroke: -ml-series-1; -fx-stroke-width: 2px; }
 .default-color1.chart-series-line { -fx-stroke: -ml-series-2; -fx-stroke-width: 2px; }
 .default-color2.chart-series-line { -fx-stroke: -ml-series-3; -fx-stroke-width: 2px; }

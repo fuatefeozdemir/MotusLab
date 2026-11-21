@@ -14,8 +14,6 @@ import com.motuslab.ui.component.ExperimentDetailPane;
 import com.motuslab.ui.component.ExperimentSidebar;
 import com.motuslab.ui.component.TopBar;
 import javafx.concurrent.Task;
-import javafx.scene.control.Alert;
-import javafx.scene.control.ButtonType;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.BorderPane;
 
@@ -82,7 +80,7 @@ public class DashboardView extends BorderPane {
 
         ScrollPane scrollPane = new ScrollPane(detailPane);
         scrollPane.setFitToWidth(true);
-        scrollPane.setStyle("-fx-background-color: transparent;");
+        scrollPane.getStyleClass().add("ml-scroll-pane");
 
         setTop(topBar);
         setLeft(sidebar);
@@ -100,7 +98,7 @@ public class DashboardView extends BorderPane {
                 detailPane.renderEmpty();
             }
         } catch (MotusLabException ex) {
-            showErrorAlert("Deneyler yüklenemedi", ex.getMessage());
+            UiHelper.showError("Deneyler yüklenemedi", ex.getMessage());
         }
     }
 
@@ -242,21 +240,19 @@ public class DashboardView extends BorderPane {
         if (selectedExperiment == null) {
             return;
         }
-        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
-        confirm.setTitle("Deneyi Sil");
-        confirm.setHeaderText(selectedExperiment.getTitle());
-        confirm.setContentText("Bu deney ve tüm çalıştırma geçmişi kalıcı olarak silinecek. Emin misiniz?");
-
-        confirm.showAndWait().ifPresent(result -> {
-            if (result == ButtonType.OK) {
-                try {
-                    experimentService.deleteExperiment(selectedExperiment.getId());
-                    loadExperiments(null);
-                } catch (MotusLabException ex) {
-                    detailPane.showFeedback(ex.getMessage(), true);
-                }
+        boolean confirmed = UiHelper.showConfirm(
+                "Deneyi Sil",
+                selectedExperiment.getTitle(),
+                "Bu deney ve tüm çalıştırma geçmişi kalıcı olarak silinecek. Emin misiniz?"
+        );
+        if (confirmed) {
+            try {
+                experimentService.deleteExperiment(selectedExperiment.getId());
+                loadExperiments(null);
+            } catch (MotusLabException ex) {
+                detailPane.showFeedback(ex.getMessage(), true);
             }
-        });
+        }
     }
 
     private void handleCompareRuns() {
@@ -276,13 +272,5 @@ public class DashboardView extends BorderPane {
 
     private void showFeedback(String message, boolean isError) {
         detailPane.showFeedback(message, isError);
-    }
-
-    private void showErrorAlert(String header, String message) {
-        Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle("Hata");
-        alert.setHeaderText(header);
-        alert.setContentText(message);
-        alert.showAndWait();
     }
 }
