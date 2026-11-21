@@ -9,10 +9,15 @@ import com.motuslab.service.SimulationRunService;
 import com.motuslab.ui.AuthView;
 import com.motuslab.ui.DashboardView;
 import javafx.application.Application;
+import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 
+import java.util.Objects;
+
 public class MainApp extends Application {
+
+    private static final String APP_STYLESHEET = "/css/motuslab.css";
 
     private final AuthService authService = new AuthService();
     private final ExperimentService experimentService = new ExperimentService();
@@ -32,7 +37,7 @@ public class MainApp extends Application {
 
     private void showAuthView() {
         AuthView authView = new AuthView(authService, this::showDashboard);
-        primaryStage.setScene(new Scene(authView, 480, 520));
+        primaryStage.setScene(createScene(authView, 480, 520));
     }
 
     private void showDashboard(User user) {
@@ -46,7 +51,17 @@ public class MainApp extends Application {
                     showAuthView();
                 }
         );
-        primaryStage.setScene(new Scene(dashboardView, 1180, 760));
+        primaryStage.setScene(createScene(dashboardView, 1180, 760));
+    }
+
+    private Scene createScene(Parent root, double width, double height) {
+        Scene scene = new Scene(root, width, height);
+        String css = Objects.requireNonNull(
+                getClass().getResource(APP_STYLESHEET),
+                "Stylesheet bulunamadı: " + APP_STYLESHEET
+        ).toExternalForm();
+        scene.getStylesheets().add(css);
+        return scene;
     }
 
     public static void main(String[] args) {

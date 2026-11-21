@@ -1,0 +1,75 @@
+/* =========================================
+   MotusLab — Tasarım Token'ları ve Stiller
+   ========================================= */
+
+.root {
+    /* Renk Paleti */
+    -ml-bg-app:        #f8fafc;
+    -ml-bg-surface:    #ffffff;
+    -ml-bg-subtle:     #f1f5f9;
+    -ml-border:        #e2e8f0;
+    -ml-text-primary:  #0f172a;
+    -ml-text-muted:    #64748b;
+    -ml-accent:        #2563eb;
+    -ml-accent-hover:  #1d4ed8;
+    -ml-danger:        #dc2626;
+    -ml-success:       #16a34a;
+
+    -fx-background-color: -ml-bg-app;
+}
+
+/* --- Üst Bar --- */
+.ml-topbar {
+    -fx-background-color: -ml-bg-surface;
+    -fx-border-color: transparent transparent -ml-border transparent;
+    -fx-border-width: 0 0 1 0;
+    -fx-padding: 12 20 12 20;
+}
+
+.ml-brand {
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -ml-text-primary;
+}
+
+/* --- Yan Menü (Sidebar) --- */
+.ml-sidebar {
+    -fx-background-color: -ml-bg-surface;
+    -fx-border-color: transparent -ml-border transparent transparent;
+    -fx-border-width: 0 1 0 0;
+    -fx-padding: 14;
+}
+
+/* --- Kartlar ve Paneller --- */
+.ml-card {
+    -fx-background-color: -ml-bg-surface;
+    -fx-border-color: -ml-border;
+    -fx-border-width: 1;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-padding: 16;
+}
+
+.ml-detail-pane {
+    -fx-background-color: -ml-bg-app;
+    -fx-padding: 20;
+}
+
+/* --- Tipografi ve Geri Bildirim --- */
+.ml-section-title {
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -ml-text-primary;
+}
+
+.ml-muted {
+    -fx-text-fill: -ml-text-muted;
+}
+
+.ml-feedback-error {
+    -fx-text-fill: -ml-danger;
+}
+
+.ml-feedback-success {
+    -fx-text-fill: -ml-success;
+}
