@@ -3,37 +3,26 @@ package com.motuslab.ui;
 import atlantafx.base.theme.Styles;
 import com.motuslab.exception.MotusLabException;
 import com.motuslab.model.Experiment;
-import com.motuslab.model.ExperimentMember;
 import com.motuslab.model.ExperimentParameter;
-import com.motuslab.model.RunMetric;
-import com.motuslab.model.RunSample;
 import com.motuslab.model.SimulationRun;
-import com.motuslab.model.SimulationType;
 import com.motuslab.model.User;
+import com.motuslab.service.CsvExportService;
 import com.motuslab.service.ExperimentMemberService;
 import com.motuslab.service.ExperimentService;
 import com.motuslab.service.SimulationRunService;
 import javafx.collections.FXCollections;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
-import javafx.scene.chart.LineChart;
-import javafx.scene.chart.NumberAxis;
-import javafx.scene.chart.XYChart;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
-import javafx.scene.control.ButtonBar;
 import javafx.scene.control.ButtonType;
-import javafx.scene.control.ComboBox;
-import javafx.scene.control.Dialog;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Separator;
-import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
@@ -41,15 +30,12 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 
 public class DashboardView extends BorderPane {
 
-    private static final int MAX_CHART_POINTS = 500;
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss");
 
     private final User currentUser;
@@ -61,12 +47,11 @@ public class DashboardView extends BorderPane {
     private final ListView<Experiment> experimentListView = new ListView<>();
     private final ListView<SimulationRun> runListView = new ListView<>();
     private final VBox detailContainer = new VBox(16);
-    private final VBox runResultContainer = new VBox(14);
     private final Label feedbackLabel = new Label();
+    private final RunResultPane runResultPane;
 
     private final Map<Integer, TextField> parameterInputs = new LinkedHashMap<>();
     private Experiment selectedExperiment;
-    private String currentPermission = "NONE";
 
     public DashboardView(
             User currentUser,
@@ -80,6 +65,7 @@ public class DashboardView extends BorderPane {
         this.simulationRunService = simulationRunService;
         this.memberService = memberService;
         this.onLogout = onLogout;
+        this.runResultPane = new RunResultPane(simulationRunService, new CsvExportService(), this::showFeedback);
 
         initTopBar();
         initLeftPanel();
@@ -115,7 +101,9 @@ public class DashboardView extends BorderPane {
         Button newExpButton = new Button("+ Yeni Deney");
         newExpButton.getStyleClass().add(Styles.ACCENT);
         newExpButton.setMaxWidth(Double.MAX_VALUE);
-        newExpButton.setOnAction(e -> openNewExperimentDialog());
+        newExpButton.setOnAction(e ->
+                NewExperimentDialog.show(experimentService).ifPresent(created -> loadExperiments(created.getId()))
+        );
 
         experimentListView.setCellFactory(lv -> new ListCell<>() {
             @Override
@@ -190,9 +178,9 @@ public class DashboardView extends BorderPane {
             }
         });
 
-        runListView.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> {
-            renderRunResults(newVal);
-        });
+        runListView.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) ->
+                runResultPane.render(selectedExperiment, newVal)
+        );
 
         ScrollPane scrollPane = new ScrollPane(detailContainer);
         scrollPane.setFitToWidth(true);
@@ -224,34 +212,34 @@ public class DashboardView extends BorderPane {
 
     private void renderExperimentDetails() {
         detailContainer.getChildren().clear();
-        runResultContainer.getChildren().clear();
+        runResultPane.getChildren().clear();
         parameterInputs.clear();
         clearFeedback();
 
         if (selectedExperiment == null) {
-            currentPermission = "NONE";
             Label emptyLabel = new Label("Bir deney seçin veya sol menüden yeni bir deney oluşturun.");
             emptyLabel.getStyleClass().add(Styles.TEXT_MUTED);
             detailContainer.getChildren().add(emptyLabel);
             return;
         }
 
+        String permission;
         try {
-            currentPermission = memberService.getEffectivePermission(selectedExperiment);
+            permission = memberService.getEffectivePermission(selectedExperiment);
         } catch (MotusLabException ex) {
-            currentPermission = "VIEW";
+            permission = "VIEW";
         }
 
-        boolean isOwner = "OWNER".equals(currentPermission);
-        boolean canEdit = isOwner || "EDIT".equals(currentPermission);
-        boolean canRun = canEdit || "RUN".equals(currentPermission);
+        boolean isOwner = "OWNER".equals(permission);
+        boolean canEdit = isOwner || "EDIT".equals(permission);
+        boolean canRun = canEdit || "RUN".equals(permission);
 
         Label titleLabel = new Label(selectedExperiment.getTitle());
         titleLabel.getStyleClass().add(Styles.TITLE_2);
 
         String metaText = "Model: " + selectedExperiment.getSimulationTypeName()
                 + " • Sahip: @" + selectedExperiment.getOwnerUsername()
-                + " • Yetkiniz: " + currentPermission;
+                + " • Yetkiniz: " + permission;
         Label simTypeLabel = new Label(metaText);
         simTypeLabel.getStyleClass().add(Styles.TEXT_MUTED);
 
@@ -278,8 +266,7 @@ public class DashboardView extends BorderPane {
                 valueField.setPrefWidth(160);
                 valueField.setEditable(canEdit);
 
-                String rangeText = formatRange(param.getMinValue(), param.getMaxValue());
-                Label rangeLabel = new Label(rangeText);
+                Label rangeLabel = new Label(formatRange(param.getMinValue(), param.getMaxValue()));
                 rangeLabel.getStyleClass().add(Styles.TEXT_MUTED);
 
                 paramGrid.add(nameLabel, 0, row);
@@ -294,23 +281,20 @@ public class DashboardView extends BorderPane {
         }
 
         HBox actionBar = new HBox(10);
-
         if (canRun) {
             Button runSimButton = new Button("Simülasyonu Çalıştır");
             runSimButton.getStyleClass().add(Styles.ACCENT);
             runSimButton.setOnAction(e -> handleRunSimulation(canEdit));
             actionBar.getChildren().add(runSimButton);
         }
-
         if (canEdit) {
             Button saveParamsButton = new Button("Parametreleri Kaydet");
             saveParamsButton.setOnAction(e -> handleSaveParameters());
             actionBar.getChildren().add(saveParamsButton);
         }
-
         if (isOwner) {
             Button shareButton = new Button("Paylaş");
-            shareButton.setOnAction(e -> openShareDialog());
+            shareButton.setOnAction(e -> ShareExperimentDialog.show(selectedExperiment, memberService));
             actionBar.getChildren().add(shareButton);
 
             Button deleteButton = new Button("Deneyi Sil");
@@ -336,130 +320,10 @@ public class DashboardView extends BorderPane {
                 new Separator(),
                 runsHeader,
                 runListView,
-                runResultContainer
+                runResultPane
         );
 
         loadRuns(selectedExperiment.getId(), null);
-    }
-
-    private void openShareDialog() {
-        if (selectedExperiment == null) {
-            return;
-        }
-
-        Dialog<Void> dialog = new Dialog<>();
-        dialog.setTitle("Deneyi Paylaş");
-        dialog.setHeaderText(selectedExperiment.getTitle() + " — Üye Yönetimi");
-        dialog.getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
-
-        Label dialogFeedback = new Label();
-        dialogFeedback.setWrapText(true);
-        dialogFeedback.setVisible(false);
-        dialogFeedback.setManaged(false);
-
-        ListView<ExperimentMember> memberListView = new ListView<>();
-        memberListView.setPrefHeight(200);
-
-        Runnable refreshMembers = () -> {
-            try {
-                List<ExperimentMember> members = memberService.getMembers(selectedExperiment.getId());
-                memberListView.setItems(FXCollections.observableArrayList(members));
-            } catch (MotusLabException ex) {
-                dialogFeedback.setText(ex.getMessage());
-                dialogFeedback.getStyleClass().setAll(Styles.DANGER);
-                dialogFeedback.setVisible(true);
-                dialogFeedback.setManaged(true);
-            }
-        };
-
-        memberListView.setCellFactory(lv -> new ListCell<>() {
-            @Override
-            protected void updateItem(ExperimentMember item, boolean empty) {
-                super.updateItem(item, empty);
-                if (empty || item == null) {
-                    setText(null);
-                    setGraphic(null);
-                } else {
-                    Label userLabel = new Label("@" + item.getUsername());
-                    userLabel.getStyleClass().add(Styles.TEXT_BOLD);
-
-                    Label permLabel = new Label(item.getPermission());
-                    permLabel.getStyleClass().add(Styles.TEXT_MUTED);
-
-                    Region spacer = new Region();
-                    HBox.setHgrow(spacer, Priority.ALWAYS);
-
-                    Button removeBtn = new Button("Çıkar");
-                    removeBtn.getStyleClass().add(Styles.DANGER);
-                    removeBtn.setOnAction(e -> {
-                        try {
-                            memberService.removeMember(selectedExperiment.getId(), item.getUserId());
-                            dialogFeedback.setText("@" + item.getUsername() + " çıkarıldı.");
-                            dialogFeedback.getStyleClass().setAll(Styles.SUCCESS);
-                            dialogFeedback.setVisible(true);
-                            dialogFeedback.setManaged(true);
-                            refreshMembers.run();
-                        } catch (MotusLabException ex) {
-                            dialogFeedback.setText(ex.getMessage());
-                            dialogFeedback.getStyleClass().setAll(Styles.DANGER);
-                            dialogFeedback.setVisible(true);
-                            dialogFeedback.setManaged(true);
-                        }
-                    });
-
-                    HBox row = new HBox(10, userLabel, permLabel, spacer, removeBtn);
-                    row.setAlignment(Pos.CENTER_LEFT);
-                    setGraphic(row);
-                }
-            }
-        });
-
-        TextField usernameField = new TextField();
-        usernameField.setPromptText("Kullanıcı adı");
-        HBox.setHgrow(usernameField, Priority.ALWAYS);
-
-        ComboBox<String> permBox = new ComboBox<>(FXCollections.observableArrayList("VIEW", "RUN", "EDIT"));
-        permBox.getSelectionModel().select("VIEW");
-
-        Button addBtn = new Button("Ekle / Güncelle");
-        addBtn.getStyleClass().add(Styles.ACCENT);
-        addBtn.setOnAction(e -> {
-            try {
-                memberService.addOrUpdateMember(
-                        selectedExperiment.getId(),
-                        usernameField.getText(),
-                        permBox.getValue()
-                );
-                usernameField.clear();
-                dialogFeedback.setText("Üye yetkisi kaydedildi.");
-                dialogFeedback.getStyleClass().setAll(Styles.SUCCESS);
-                dialogFeedback.setVisible(true);
-                dialogFeedback.setManaged(true);
-                refreshMembers.run();
-            } catch (MotusLabException ex) {
-                dialogFeedback.setText(ex.getMessage());
-                dialogFeedback.getStyleClass().setAll(Styles.DANGER);
-                dialogFeedback.setVisible(true);
-                dialogFeedback.setManaged(true);
-            }
-        });
-
-        HBox addRow = new HBox(8, usernameField, permBox, addBtn);
-        addRow.setAlignment(Pos.CENTER_LEFT);
-
-        VBox content = new VBox(12,
-                new Label("Yeni Üye Ekle veya Yetki Güncelle"),
-                addRow,
-                dialogFeedback,
-                new Separator(),
-                new Label("Mevcut Üyeler"),
-                memberListView
-        );
-        content.setPrefWidth(460);
-        dialog.getDialogPane().setContent(content);
-
-        refreshMembers.run();
-        dialog.showAndWait();
     }
 
     private void loadRuns(int experimentId, Integer selectRunId) {
@@ -475,7 +339,7 @@ public class DashboardView extends BorderPane {
             } else if (!runs.isEmpty()) {
                 runListView.getSelectionModel().selectFirst();
             } else {
-                renderRunResults(null);
+                runResultPane.render(selectedExperiment, null);
             }
         } catch (MotusLabException ex) {
             showFeedback(ex.getMessage(), true);
@@ -498,147 +362,6 @@ public class DashboardView extends BorderPane {
             showFeedback(ex.getMessage(), true);
             loadRuns(selectedExperiment.getId(), null);
         }
-    }
-
-    private void renderRunResults(SimulationRun run) {
-        runResultContainer.getChildren().clear();
-
-        if (run == null) {
-            Label empty = new Label("Henüz bir çalıştırma kaydı yok.");
-            empty.getStyleClass().add(Styles.TEXT_MUTED);
-            runResultContainer.getChildren().add(empty);
-            return;
-        }
-
-        if ("FAILED".equals(run.getStatus())) {
-            Label errLabel = new Label("Çalıştırma başarısız oldu: " +
-                    (run.getErrorMessage() != null ? run.getErrorMessage() : "Bilinmeyen hata"));
-            errLabel.getStyleClass().add(Styles.DANGER);
-            errLabel.setWrapText(true);
-            runResultContainer.getChildren().add(errLabel);
-            return;
-        }
-
-        if (!"COMPLETED".equals(run.getStatus())) {
-            Label statusLabel = new Label("Durum: " + run.getStatus());
-            statusLabel.getStyleClass().add(Styles.TEXT_MUTED);
-            runResultContainer.getChildren().add(statusLabel);
-            return;
-        }
-
-        try {
-            List<RunMetric> metrics = simulationRunService.getMetricsByRun(run.getId());
-            List<RunSample> samples = simulationRunService.getSamplesByRun(run.getId());
-
-            Label metricsTitle = new Label("Sonuç Metrikleri (Run #" + run.getId() + ")");
-            metricsTitle.getStyleClass().add(Styles.TITLE_4);
-
-            FlowPane metricsPane = new FlowPane(12, 12);
-            for (RunMetric m : metrics) {
-                VBox card = new VBox(4);
-                card.setPadding(new Insets(10, 14, 10, 14));
-                card.setStyle("-fx-border-color: -color-border-default; -fx-border-radius: 6; -fx-background-radius: 6;");
-
-                Label name = new Label(formatMetricName(m.getMetricCode()));
-                name.getStyleClass().add(Styles.TEXT_MUTED);
-
-                Label val = new Label(String.format(Locale.US, "%.3f %s", m.getMetricValue(), m.getUnit()));
-                val.getStyleClass().add(Styles.TITLE_4);
-
-                card.getChildren().addAll(name, val);
-                metricsPane.getChildren().add(card);
-            }
-
-            List<RunSample> sampled = downsample(samples, MAX_CHART_POINTS);
-            boolean is2D = selectedExperiment != null && "PROJECTILE_2D".equals(selectedExperiment.getSimulationTypeCode());
-
-            HBox chartsBox = new HBox(16);
-            if (is2D) {
-                LineChart<Number, Number> trajectoryChart = buildChart(
-                        "Yörünge (y - x)", "Konum x (m)", "Yükseklik y (m)", sampled,
-                        RunSample::getPositionX, s -> s.getPositionY() != null ? s.getPositionY() : 0.0
-                );
-                LineChart<Number, Number> speedChart = buildChart(
-                        "Hız Büyüklüğü - Zaman", "Zaman (s)", "Hız (m/s)", sampled,
-                        RunSample::getTimeSeconds, s -> Math.hypot(s.getVelocityX(), s.getVelocityY() != null ? s.getVelocityY() : 0.0)
-                );
-                HBox.setHgrow(trajectoryChart, Priority.ALWAYS);
-                HBox.setHgrow(speedChart, Priority.ALWAYS);
-                chartsBox.getChildren().addAll(trajectoryChart, speedChart);
-            } else {
-                LineChart<Number, Number> posChart = buildChart(
-                        "Konum - Zaman", "Zaman (s)", "Konum x (m)", sampled,
-                        RunSample::getTimeSeconds, RunSample::getPositionX
-                );
-                LineChart<Number, Number> velChart = buildChart(
-                        "Hız - Zaman", "Zaman (s)", "Hız vx (m/s)", sampled,
-                        RunSample::getTimeSeconds, RunSample::getVelocityX
-                );
-                HBox.setHgrow(posChart, Priority.ALWAYS);
-                HBox.setHgrow(velChart, Priority.ALWAYS);
-                chartsBox.getChildren().addAll(posChart, velChart);
-            }
-
-            runResultContainer.getChildren().addAll(metricsTitle, metricsPane, chartsBox);
-        } catch (MotusLabException ex) {
-            showFeedback(ex.getMessage(), true);
-        }
-    }
-
-    private LineChart<Number, Number> buildChart(
-            String title,
-            String xLabel,
-            String yLabel,
-            List<RunSample> samples,
-            java.util.function.ToDoubleFunction<RunSample> xMapper,
-            java.util.function.ToDoubleFunction<RunSample> yMapper
-    ) {
-        NumberAxis xAxis = new NumberAxis();
-        xAxis.setLabel(xLabel);
-        NumberAxis yAxis = new NumberAxis();
-        yAxis.setLabel(yLabel);
-
-        LineChart<Number, Number> chart = new LineChart<>(xAxis, yAxis);
-        chart.setTitle(title);
-        chart.setLegendVisible(false);
-        chart.setCreateSymbols(false);
-        chart.setAnimated(false);
-        chart.setPrefHeight(280);
-
-        XYChart.Series<Number, Number> series = new XYChart.Series<>();
-        for (RunSample s : samples) {
-            series.getData().add(new XYChart.Data<>(xMapper.applyAsDouble(s), yMapper.applyAsDouble(s)));
-        }
-        chart.getData().add(series);
-        return chart;
-    }
-
-    private List<RunSample> downsample(List<RunSample> samples, int maxPoints) {
-        if (samples.size() <= maxPoints) {
-            return samples;
-        }
-        List<RunSample> result = new ArrayList<>(maxPoints);
-        double step = (double) (samples.size() - 1) / (maxPoints - 1);
-        for (int i = 0; i < maxPoints; i++) {
-            int idx = (int) Math.round(i * step);
-            result.add(samples.get(Math.min(idx, samples.size() - 1)));
-        }
-        return result;
-    }
-
-    private String formatMetricName(String code) {
-        return switch (code) {
-            case "total_time" -> "Toplam Süre";
-            case "flight_time" -> "Uçuş Süresi";
-            case "final_position" -> "Son Konum";
-            case "displacement" -> "Yer Değiştirme";
-            case "range" -> "Menzil";
-            case "max_height" -> "Maks. Yükseklik";
-            case "final_velocity" -> "Son Hız";
-            case "impact_speed" -> "Çarpma Hızı";
-            case "max_speed" -> "Maks. Hız";
-            default -> code;
-        };
     }
 
     private void handleSaveParameters() {
@@ -690,67 +413,6 @@ public class DashboardView extends BorderPane {
                 }
             }
         });
-    }
-
-    private void openNewExperimentDialog() {
-        List<SimulationType> simTypes;
-        try {
-            simTypes = experimentService.getAllSimulationTypes();
-        } catch (MotusLabException ex) {
-            showErrorAlert("Simülasyon türleri alınamadı", ex.getMessage());
-            return;
-        }
-
-        Dialog<Experiment> dialog = new Dialog<>();
-        dialog.setTitle("Yeni Deney Oluştur");
-        dialog.setHeaderText("Deney bilgilerini girin");
-
-        ButtonType createBtnType = new ButtonType("Oluştur", ButtonBar.ButtonData.OK_DONE);
-        dialog.getDialogPane().getButtonTypes().addAll(createBtnType, ButtonType.CANCEL);
-
-        TextField titleField = new TextField();
-        titleField.setPromptText("Örn: 45 Derece Eğik Atış");
-
-        ComboBox<SimulationType> simTypeBox = new ComboBox<>(FXCollections.observableArrayList(simTypes));
-        simTypeBox.setMaxWidth(Double.MAX_VALUE);
-        if (!simTypes.isEmpty()) {
-            simTypeBox.getSelectionModel().selectFirst();
-        }
-
-        TextArea descArea = new TextArea();
-        descArea.setPromptText("Açıklama (opsiyonel)");
-        descArea.setPrefRowCount(3);
-
-        VBox content = new VBox(10,
-                new Label("Başlık"), titleField,
-                new Label("Simülasyon Türü"), simTypeBox,
-                new Label("Açıklama"), descArea
-        );
-        content.setPrefWidth(360);
-        dialog.getDialogPane().setContent(content);
-
-        dialog.setResultConverter(button -> {
-            if (button == createBtnType) {
-                SimulationType selectedType = simTypeBox.getValue();
-                if (selectedType == null) {
-                    return null;
-                }
-                try {
-                    return experimentService.createExperiment(
-                            selectedType.getId(),
-                            titleField.getText(),
-                            descArea.getText(),
-                            null
-                    );
-                } catch (MotusLabException ex) {
-                    showErrorAlert("Deney oluşturulamadı", ex.getMessage());
-                    return null;
-                }
-            }
-            return null;
-        });
-
-        dialog.showAndWait().ifPresent(created -> loadExperiments(created.getId()));
     }
 
     private String formatRange(Double min, Double max) {
