@@ -6,10 +6,7 @@ import com.motuslab.model.Experiment;
 import com.motuslab.model.ExperimentParameter;
 import com.motuslab.model.SimulationRun;
 import com.motuslab.model.User;
-import com.motuslab.service.CsvExportService;
-import com.motuslab.service.ExperimentMemberService;
-import com.motuslab.service.ExperimentService;
-import com.motuslab.service.SimulationRunService;
+import com.motuslab.service.*;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
@@ -110,7 +107,13 @@ public class DashboardView extends BorderPane {
         Button logoutButton = new Button("Çıkış Yap");
         logoutButton.setOnAction(e -> onLogout.run());
 
-        HBox topBar = new HBox(12, brandLabel, spacer, userLabel, logoutButton);
+        HBox topBar = new HBox(12, brandLabel, spacer);
+        if (currentUser.isAdmin()) {
+            Button adminButton = new Button("Admin Paneli");
+            adminButton.setOnAction(e -> AdminPanelDialog.show(currentUser, new AdminService()));
+            topBar.getChildren().add(adminButton);
+        }
+        topBar.getChildren().addAll(userLabel, logoutButton);
         topBar.setAlignment(Pos.CENTER_LEFT);
         topBar.setPadding(new Insets(12, 20, 12, 20));
         topBar.setStyle("-fx-border-color: transparent transparent -color-border-default transparent;");
