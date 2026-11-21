@@ -306,12 +306,20 @@ public class DashboardView extends BorderPane {
         Label runsHeader = new Label("Çalıştırma Geçmişi");
         runsHeader.getStyleClass().add(Styles.TITLE_4);
 
+        Region runsSpacer = new Region();
+        HBox.setHgrow(runsSpacer, Priority.ALWAYS);
+
+        Button compareRunsButton = new Button("Çalıştırmaları Karşılaştır");
+        compareRunsButton.setOnAction(e -> handleCompareRuns());
+
+        HBox runsHeaderRow = new HBox(10, runsHeader, runsSpacer, compareRunsButton);
+        runsHeaderRow.setAlignment(Pos.CENTER_LEFT);
+
         detailContainer.getChildren().addAll(
-                headerBox,
                 new Separator(),
-                paramsHeader,
-                paramGrid,
-                feedbackLabel
+                runsHeaderRow,
+                runListView,
+                runResultPane
         );
         if (!actionBar.getChildren().isEmpty()) {
             detailContainer.getChildren().add(actionBar);
@@ -344,6 +352,22 @@ public class DashboardView extends BorderPane {
         } catch (MotusLabException ex) {
             showFeedback(ex.getMessage(), true);
         }
+    }
+
+    private void handleCompareRuns() {
+        if (selectedExperiment == null) {
+            return;
+        }
+        List<SimulationRun> completed = runListView.getItems().stream()
+                .filter(r -> "COMPLETED".equals(r.getStatus()))
+                .toList();
+
+        if (completed.size() < 2) {
+            showFeedback("Karşılaştırma için en az 2 tamamlanmış çalıştırma gerekir.", true);
+            return;
+        }
+
+        RunComparisonDialog.show(selectedExperiment, completed, simulationRunService);
     }
 
     private void handleRunSimulation(boolean canEdit) {
