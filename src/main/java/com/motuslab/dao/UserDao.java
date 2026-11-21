@@ -9,6 +9,8 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 public class UserDao {
@@ -175,6 +177,73 @@ public class UserDao {
             ps.executeUpdate();
         } catch (SQLException e) {
             throw new DataAccessException("Son giriş zamanı güncellenirken hata oluştu.", e);
+        }
+    }
+
+    public List<User> findAll() {
+        String sql = BASE_SELECT + " ORDER BY u.id ASC";
+        List<User> users = new ArrayList<>();
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+
+            while (rs.next()) {
+                users.add(mapRow(rs));
+            }
+            return users;
+        } catch (SQLException e) {
+            throw new DataAccessException("Kullanıcı listesi alınırken hata oluştu.", e);
+        }
+    }
+
+    public List<String> findAllRoleNames() {
+        String sql = "SELECT name FROM roles ORDER BY id ASC";
+        List<String> roles = new ArrayList<>();
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+
+            while (rs.next()) {
+                roles.add(rs.getString("name"));
+            }
+            return roles;
+        } catch (SQLException e) {
+            throw new DataAccessException("Roller alınırken hata oluştu.", e);
+        }
+    }
+
+    public void updateActiveStatus(int userId, boolean active) {
+        String sql = "UPDATE users SET is_active = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?";
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setBoolean(1, active);
+            ps.setInt(2, userId);
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            throw new DataAccessException("Kullanıcı durumu güncellenirken hata oluştu.", e);
+        }
+    }
+
+    public void updateRoleByName(int userId, String roleName) {
+        String sql = """
+                UPDATE users
+                SET role_id = (SELECT id FROM roles WHERE name = ?),
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+                """;
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, roleName);
+            ps.setInt(2, userId);
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            throw new DataAccessException("Kullanıcı rolü güncellenirken hata oluştu.", e);
         }
     }
 
