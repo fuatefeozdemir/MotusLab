@@ -131,13 +131,15 @@ CREATE TABLE experiment_parameters (
 CREATE TABLE simulation_runs (
                                  id            INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
                                  experiment_id INTEGER NOT NULL,
+                                 run_number    INTEGER NOT NULL,
+                                 name          VARCHAR(120),
+                                 notes         TEXT,
                                  triggered_by  INTEGER NOT NULL,
                                  status        VARCHAR(20) NOT NULL DEFAULT 'CREATED',
                                  created_at    TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
                                  started_at    TIMESTAMPTZ,
                                  finished_at   TIMESTAMPTZ,
                                  error_message TEXT,
-                                 run_number INTEGER NOT NULL,
 
                                  CONSTRAINT fk_sim_runs_experiment
                                      FOREIGN KEY (experiment_id) REFERENCES experiments(id)
@@ -148,9 +150,11 @@ CREATE TABLE simulation_runs (
                                  CONSTRAINT chk_sim_runs_status
                                      CHECK (status IN ('CREATED', 'RUNNING', 'COMPLETED', 'FAILED')),
                                  CONSTRAINT chk_sim_runs_time_order
-                                     CHECK (finished_at IS NULL OR started_at IS NULL OR finished_at >= started_at)
-                                 CONSTRAINT chk_sim_runs_number CHECK (run_number > 0)
-                                 CONSTRAINT uq_sim_runs_exp_number UNIQUE (experiment_id, run_number)
+                                     CHECK (finished_at IS NULL OR started_at IS NULL OR finished_at >= started_at),
+                                 CONSTRAINT chk_sim_runs_number
+                                     CHECK (run_number > 0),
+                                 CONSTRAINT uq_sim_runs_exp_number
+                                     UNIQUE (experiment_id, run_number)
 );
 
 CREATE TABLE run_parameter_snapshots (

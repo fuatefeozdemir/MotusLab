@@ -13,6 +13,8 @@ public class SimulationRun {
     private OffsetDateTime startedAt;
     private OffsetDateTime finishedAt;
     private String errorMessage;
+    private String name;
+    private String notes;
 
     public SimulationRun() {
     }
@@ -97,5 +99,28 @@ public class SimulationRun {
 
     public void setRunNumber(int runNumber) {
         this.runNumber = runNumber;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getNotes() {
+        return notes;
+    }
+
+    public void setNotes(String notes) {
+        this.notes = notes;
+    }
+
+    public String getDisplayName() {
+        if (name != null && !name.isBlank()) {
+            return "Run #" + runNumber + " — " + name;
+        }
+        return "Run #" + runNumber;
     }
 }
