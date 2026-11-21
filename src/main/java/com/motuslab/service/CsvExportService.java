@@ -1,7 +1,6 @@
 package com.motuslab.service;
 
 import com.motuslab.exception.ExportException;
-import com.motuslab.exception.MotusLabException;
 import com.motuslab.model.RunMetric;
 import com.motuslab.model.RunSample;
 import com.motuslab.model.SimulationRun;
@@ -26,7 +25,7 @@ public class CsvExportService {
         try (BufferedWriter writer = Files.newBufferedWriter(targetPath, StandardCharsets.UTF_8)) {
             writer.write("# Experiment: " + sanitize(experimentTitle));
             writer.newLine();
-            writer.write("# Run ID: " + run.getId() + " | Status: " + run.getStatus());
+            writer.write("# Run #" + run.getRunNumber() + " (ID: " + run.getId() + ") | Status: " + run.getStatus());
             writer.newLine();
 
             for (RunMetric m : metrics) {

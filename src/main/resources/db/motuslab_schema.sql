@@ -285,6 +285,7 @@ v_owner_id      INTEGER;
     v_is_archived   BOOLEAN;
     v_user_active   BOOLEAN;
     v_has_perm      BOOLEAN;
+    v_next_run_num  INTEGER;
     v_run_id        INTEGER;
 BEGIN
 SELECT is_active INTO v_user_active
@@ -297,7 +298,8 @@ END IF;
 
 SELECT owner_id, is_archived INTO v_owner_id, v_is_archived
 FROM experiments
-WHERE id = p_experiment_id;
+WHERE id = p_experiment_id
+    FOR UPDATE;
 
 IF NOT FOUND THEN
         RAISE EXCEPTION 'Deney bulunamadı (experiment_id: %).', p_experiment_id;
@@ -323,8 +325,12 @@ END IF;
         RAISE EXCEPTION 'Bu deneyi çalıştırma yetkiniz yok.';
 END IF;
 
-INSERT INTO simulation_runs (experiment_id, triggered_by, status)
-VALUES (p_experiment_id, p_user_id, 'CREATED')
+SELECT COALESCE(MAX(run_number), 0) + 1 INTO v_next_run_num
+FROM simulation_runs
+WHERE experiment_id = p_experiment_id;
+
+INSERT INTO simulation_runs (experiment_id, run_number, triggered_by, status)
+VALUES (p_experiment_id, v_next_run_num, p_user_id, 'CREATED')
     RETURNING id INTO v_run_id;
 
 INSERT INTO run_parameter_snapshots (run_id, parameter_definition_id, value)

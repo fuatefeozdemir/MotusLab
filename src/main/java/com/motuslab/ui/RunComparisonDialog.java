@@ -92,8 +92,8 @@ public final class RunComparisonDialog {
                 List<RunSample> samplesA = downsample(simulationRunService.getSamplesByRun(runA.getId()), MAX_CHART_POINTS);
                 List<RunSample> samplesB = downsample(simulationRunService.getSamplesByRun(runB.getId()), MAX_CHART_POINTS);
 
-                String labelA = "Run #" + runA.getId();
-                String labelB = "Run #" + runB.getId();
+                String labelA = "Run #" + runA.getRunNumber();
+                String labelB = "Run #" + runB.getRunNumber();
 
                 GridPane metricsGrid = buildMetricsGrid(labelA, labelB, metricsA, metricsB);
 
@@ -180,7 +180,7 @@ public final class RunComparisonDialog {
                     setText(null);
                 } else {
                     String time = item.getCreatedAt() != null ? item.getCreatedAt().format(DATE_FMT) : "-";
-                    setText("Run #" + item.getId() + " (" + time + ")");
+                    setText("Run #" + item.getRunNumber() + " (" + time + ")");
                 }
             }
         };

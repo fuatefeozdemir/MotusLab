@@ -162,7 +162,7 @@ public class DashboardView extends BorderPane {
                     setGraphic(null);
                 } else {
                     String time = item.getCreatedAt() != null ? item.getCreatedAt().format(DATE_FMT) : "-";
-                    Label top = new Label("Run #" + item.getId() + " — " + item.getStatus());
+                    Label top = new Label("Run #" + item.getRunNumber() + " — " + item.getStatus());
                     top.getStyleClass().add(Styles.TEXT_BOLD);
                     if ("FAILED".equals(item.getStatus())) {
                         top.getStyleClass().add(Styles.DANGER);
@@ -381,7 +381,7 @@ public class DashboardView extends BorderPane {
 
         try {
             SimulationRun run = simulationRunService.executeExperiment(selectedExperiment.getId());
-            showFeedback("Simülasyon tamamlandı (Run #" + run.getId() + ").", false);
+            showFeedback("Simülasyon tamamlandı (Run #" + run.getRunNumber() + ").", false);
             loadRuns(selectedExperiment.getId(), run.getId());
         } catch (MotusLabException ex) {
             showFeedback(ex.getMessage(), true);

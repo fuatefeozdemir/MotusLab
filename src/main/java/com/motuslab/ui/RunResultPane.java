@@ -78,7 +78,7 @@ public class RunResultPane extends VBox {
             List<RunMetric> metrics = simulationRunService.getMetricsByRun(run.getId());
             List<RunSample> samples = simulationRunService.getSamplesByRun(run.getId());
 
-            Label metricsTitle = new Label("Sonuç Metrikleri (Run #" + run.getId() + ")");
+            Label metricsTitle = new Label("Sonuç Metrikleri (Run #" + run.getRunNumber() + ")");
             metricsTitle.getStyleClass().add(Styles.TITLE_4);
 
             Region spacer = new Region();
@@ -145,7 +145,8 @@ public class RunResultPane extends VBox {
     private void handleExportCsv(Experiment experiment, SimulationRun run, List<RunMetric> metrics, List<RunSample> samples) {
         FileChooser chooser = new FileChooser();
         chooser.setTitle("Simülasyon Sonuçlarını CSV Olarak Kaydet");
-        chooser.setInitialFileName("motuslab_run_" + run.getId() + ".csv");
+        int expId = experiment != null ? experiment.getId() : 0;
+        chooser.setInitialFileName("motuslab_exp" + expId + "_run" + run.getRunNumber() + ".csv");
         chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("CSV Dosyaları (*.csv)", "*.csv"));
 
         File file = chooser.showSaveDialog(getScene().getWindow());

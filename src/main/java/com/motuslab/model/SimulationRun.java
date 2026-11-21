@@ -88,4 +88,14 @@ public class SimulationRun {
     public void setErrorMessage(String errorMessage) {
         this.errorMessage = errorMessage;
     }
+
+    private int runNumber;
+
+    public int getRunNumber() {
+        return runNumber;
+    }
+
+    public void setRunNumber(int runNumber) {
+        this.runNumber = runNumber;
+    }
 }

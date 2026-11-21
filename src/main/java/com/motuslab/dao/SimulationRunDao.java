@@ -147,8 +147,8 @@ public class SimulationRunDao {
 
     public List<SimulationRun> findByExperimentId(int experimentId) {
         String sql = """
-                SELECT sr.id, sr.experiment_id, sr.triggered_by, u.username AS triggered_by_username,
-                       sr.status, sr.created_at, sr.started_at, sr.finished_at, sr.error_message
+                SELECT sr.id, sr.experiment_id, sr.run_number, sr.triggered_by, u.username AS triggered_by_username,
+                  sr.status, sr.created_at, sr.started_at, sr.finished_at, sr.error_message
                 FROM simulation_runs sr
                 JOIN users u ON u.id = sr.triggered_by
                 WHERE sr.experiment_id = ?
@@ -173,8 +173,8 @@ public class SimulationRunDao {
 
     public Optional<SimulationRun> findById(int runId) {
         String sql = """
-                SELECT sr.id, sr.experiment_id, sr.triggered_by, u.username AS triggered_by_username,
-                       sr.status, sr.created_at, sr.started_at, sr.finished_at, sr.error_message
+                SELECT sr.id, sr.experiment_id, sr.run_number, sr.triggered_by, u.username AS triggered_by_username,
+                sr.status, sr.created_at, sr.started_at, sr.finished_at, sr.error_message
                 FROM simulation_runs sr
                 JOIN users u ON u.id = sr.triggered_by
                 WHERE sr.id = ?
@@ -266,6 +266,7 @@ public class SimulationRunDao {
         run.setStartedAt(rs.getObject("started_at", OffsetDateTime.class));
         run.setFinishedAt(rs.getObject("finished_at", OffsetDateTime.class));
         run.setErrorMessage(rs.getString("error_message"));
+        run.setRunNumber(rs.getInt("run_number"));
         return run;
     }
 }
