@@ -1,103 +1,187 @@
 /* =========================================
-   MotusLab — Tasarım Token'ları ve Stiller
+   MotusLab — Temel Tasarım Sistemi
    ========================================= */
 
 .root {
-    /* Renk Paleti */
-    -ml-bg-app:        #f8fafc;
-    -ml-bg-surface:    #ffffff;
-    -ml-bg-subtle:     #f1f5f9;
-    -ml-border:        #e2e8f0;
-    -ml-text-primary:  #0f172a;
-    -ml-text-muted:    #64748b;
-    -ml-accent:        #2563eb;
-    -ml-accent-hover:  #1d4ed8;
-    -ml-danger:        #dc2626;
-    -ml-success:       #16a34a;
+    /* Marka */
+    -ml-magenta:            #D71061;
+    -ml-burgundy:           #7D0140;
+    -ml-navy:               #202D3E;
 
-    -fx-background-color: -ml-bg-app;
+    /* Destekleyici */
+    -ml-mauve:              #75445F;
+    -ml-coral:              #E58B70;
+    -ml-amber:              #D7A94F;
+    -ml-eucalyptus:         #809A91;
+    -ml-lilac:              #B9A7C9;
+    -ml-dusty-rose:         #C58B96;
+
+    /* Arka Plan ve Yüzey */
+    -ml-bg:                 #F6F0E9;
+    -ml-bg-secondary:       #EDE4DC;
+    -ml-surface:            #FFFFFF;
+    -ml-surface-elevated:   #FCF9F6;
+    -ml-surface-muted:      #F0E8E5;
+    -ml-border:             #DDD5D1;
+    -ml-border-subtle:      #EAE2DE;
+    -ml-hover:              #F1E7E8;
+
+    /* Metin */
+    -ml-text-primary:       #202D3E;
+    -ml-text-secondary:     #706A75;
+    -ml-text-muted:         #99929A;
+    -ml-text-disabled:      #C0B9BC;
+
+    /* Grafik Serileri (1 - 8) */
+    -ml-series-1:           #D71061;
+    -ml-series-2:           #547D9C;
+    -ml-series-3:           #809A91;
+    -ml-series-4:           #D7A94F;
+    -ml-series-5:           #75445F;
+    -ml-series-6:           #E58B70;
+    -ml-series-7:           #202D3E;
+    -ml-series-8:           #B9A7C9;
+
+    /* Semantik Eşlemeler */
+    -ml-accent:             -ml-magenta;
+    -ml-accent-hover:       -ml-burgundy;
+    -ml-success:            -ml-eucalyptus;
+    -ml-warning:            -ml-amber;
+    -ml-danger:             -ml-burgundy;
+
+    -fx-background-color:   -ml-bg;
+    -fx-text-fill:          -ml-text-primary;
+
+    /* AtlantaFX PrimerLight Override */
+    -color-accent-fg:           -ml-magenta;
+    -color-accent-emphasis:     -ml-magenta;
+    -color-accent-muted:        rgba(215, 16, 97, 0.35);
+    -color-accent-subtle:       -ml-hover;
+
+    -color-fg-default:          -ml-text-primary;
+    -color-fg-muted:            -ml-text-secondary;
+    -color-fg-subtle:           -ml-text-muted;
+
+    -color-bg-default:          -ml-surface;
+    -color-bg-subtle:           -ml-bg;
+    -color-bg-inset:            -ml-bg-secondary;
+
+    -color-border-default:      -ml-border;
+    -color-border-muted:        -ml-border-subtle;
+
+    -color-danger-fg:           -ml-burgundy;
+    -color-danger-emphasis:     -ml-burgundy;
+    -color-success-fg:          -ml-eucalyptus;
+    -color-success-emphasis:    -ml-eucalyptus;
 }
 
-/* --- Üst Bar --- */
+/* --- Yerleşim Yüzeyleri --- */
 .ml-topbar {
-    -fx-background-color: -ml-bg-surface;
-    -fx-border-color: transparent transparent -ml-border transparent;
-    -fx-border-width: 0 0 1 0;
-    -fx-padding: 12 20 12 20;
+    -fx-background-color:   -ml-surface;
+    -fx-border-color:       transparent transparent -ml-border transparent;
+    -fx-border-width:       0 0 1 0;
+    -fx-padding:            12 20 12 20;
 }
 
-.ml-brand {
-    -fx-font-size: 18px;
-    -fx-font-weight: bold;
-    -fx-text-fill: -ml-text-primary;
-}
-
-/* --- Yan Menü (Sidebar) --- */
 .ml-sidebar {
-    -fx-background-color: -ml-bg-surface;
-    -fx-border-color: transparent -ml-border transparent transparent;
-    -fx-border-width: 0 1 0 0;
-    -fx-padding: 14;
-}
-
-/* --- Kartlar ve Paneller --- */
-.ml-card {
-    -fx-background-color: -ml-bg-surface;
-    -fx-border-color: -ml-border;
-    -fx-border-width: 1;
-    -fx-border-radius: 8;
-    -fx-background-radius: 8;
-    -fx-padding: 16;
+    -fx-background-color:   -ml-surface-elevated;
+    -fx-border-color:       transparent -ml-border transparent transparent;
+    -fx-border-width:       0 1 0 0;
+    -fx-padding:            14;
 }
 
 .ml-detail-pane {
-    -fx-background-color: -ml-bg-app;
-    -fx-padding: 20;
+    -fx-background-color:   -ml-bg;
+    -fx-padding:            20;
 }
 
-/* --- Tipografi ve Geri Bildirim --- */
+.ml-card {
+    -fx-background-color:   -ml-surface;
+    -fx-border-color:       -ml-border;
+    -fx-border-width:       1;
+    -fx-border-radius:      8;
+    -fx-background-radius:  8;
+    -fx-padding:            16;
+}
+
+.ml-card-subtle {
+    -fx-background-color:   -ml-surface-muted;
+    -fx-border-color:       -ml-border-subtle;
+    -fx-border-width:       1;
+    -fx-border-radius:      6;
+    -fx-background-radius:  6;
+    -fx-padding:            12;
+}
+
+/* --- Tipografi ve Durum Metinleri --- */
+.ml-brand-title {
+    -fx-font-size:          18px;
+    -fx-font-weight:        bold;
+    -fx-text-fill:          -ml-navy;
+}
+
 .ml-section-title {
-    -fx-font-size: 15px;
-    -fx-font-weight: bold;
-    -fx-text-fill: -ml-text-primary;
+    -fx-font-size:          15px;
+    -fx-font-weight:        bold;
+    -fx-text-fill:          -ml-text-primary;
 }
 
-.ml-muted {
-    -fx-text-fill: -ml-text-muted;
+.ml-text-secondary {
+    -fx-text-fill:          -ml-text-secondary;
+}
+
+.ml-text-muted {
+    -fx-text-fill:          -ml-text-muted;
 }
 
 .ml-feedback-error {
-    -fx-text-fill: -ml-danger;
+    -fx-text-fill:          -ml-danger;
+    -fx-font-weight:        bold;
 }
 
 .ml-feedback-success {
-    -fx-text-fill: -ml-success;
+    -fx-text-fill:          -ml-eucalyptus;
+    -fx-font-weight:        bold;
 }
 
-/* --- Auth ve Sonuç Kartları --- */
-.ml-auth-card {
-    -fx-background-color: -ml-bg-surface;
-    -fx-border-color: -ml-border;
-    -fx-border-width: 1;
-    -fx-border-radius: 8;
-    -fx-background-radius: 8;
-    -fx-padding: 28;
+.ml-feedback-warning {
+    -fx-text-fill:          -ml-amber;
+    -fx-font-weight:        bold;
 }
 
-.ml-metric-card {
-    -fx-background-color: -ml-bg-surface;
-    -fx-border-color: -ml-border;
-    -fx-border-width: 1;
-    -fx-border-radius: 6;
-    -fx-background-radius: 6;
-    -fx-padding: 10 14 10 14;
+/* --- Buton ve Liste Etkileşimleri --- */
+.ml-btn-primary {
+    -fx-background-color:   -ml-accent;
+    -fx-text-fill:          -ml-surface;
+    -fx-background-radius:  6;
+    -fx-cursor:             hand;
 }
 
-.ml-info-box {
-    -fx-background-color: -ml-bg-surface;
-    -fx-border-color: -ml-border;
-    -fx-border-width: 1;
-    -fx-border-radius: 6;
-    -fx-background-radius: 6;
-    -fx-padding: 12;
+.ml-btn-primary:hover {
+    -fx-background-color:   -ml-accent-hover;
 }
+
+.ml-btn-primary:disabled {
+    -fx-background-color:   -ml-text-disabled;
+    -fx-text-fill:          -ml-surface;
+}
+
+.list-cell:filled:hover {
+    -fx-background-color:   -ml-hover;
+}
+
+.list-cell:filled:selected,
+.list-cell:filled:selected:hover {
+    -fx-background-color:   -ml-bg-secondary;
+    -fx-text-fill:          -ml-text-primary;
+}
+
+/* --- Grafik Serileri --- */
+.default-color0.chart-series-line { -fx-stroke: -ml-series-1; -fx-stroke-width: 2px; }
+.default-color1.chart-series-line { -fx-stroke: -ml-series-2; -fx-stroke-width: 2px; }
+.default-color2.chart-series-line { -fx-stroke: -ml-series-3; -fx-stroke-width: 2px; }
+.default-color3.chart-series-line { -fx-stroke: -ml-series-4; -fx-stroke-width: 2px; }
+.default-color4.chart-series-line { -fx-stroke: -ml-series-5; -fx-stroke-width: 2px; }
+.default-color5.chart-series-line { -fx-stroke: -ml-series-6; -fx-stroke-width: 2px; }
+.default-color6.chart-series-line { -fx-stroke: -ml-series-7; -fx-stroke-width: 2px; }
+.default-color7.chart-series-line { -fx-stroke: -ml-series-8; -fx-stroke-width: 2px; }
