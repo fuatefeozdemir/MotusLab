@@ -137,6 +137,7 @@ CREATE TABLE simulation_runs (
                                  started_at    TIMESTAMPTZ,
                                  finished_at   TIMESTAMPTZ,
                                  error_message TEXT,
+                                 run_number INTEGER NOT NULL,
 
                                  CONSTRAINT fk_sim_runs_experiment
                                      FOREIGN KEY (experiment_id) REFERENCES experiments(id)
@@ -148,6 +149,8 @@ CREATE TABLE simulation_runs (
                                      CHECK (status IN ('CREATED', 'RUNNING', 'COMPLETED', 'FAILED')),
                                  CONSTRAINT chk_sim_runs_time_order
                                      CHECK (finished_at IS NULL OR started_at IS NULL OR finished_at >= started_at)
+                                 CONSTRAINT chk_sim_runs_number CHECK (run_number > 0)
+                                 CONSTRAINT uq_sim_runs_exp_number UNIQUE (experiment_id, run_number)
 );
 
 CREATE TABLE run_parameter_snapshots (
