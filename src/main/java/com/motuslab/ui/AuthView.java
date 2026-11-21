@@ -50,7 +50,7 @@ public class AuthView extends VBox {
         setPadding(new Insets(32));
 
         titleLabel.getStyleClass().add(Styles.TITLE_2);
-        subtitleLabel.getStyleClass().add(Styles.TEXT_MUTED);
+        subtitleLabel.getStyleClass().add("ml-muted");
 
         identifierField.setPromptText("Kullanıcı adı veya e-posta");
         usernameField.setPromptText("Kullanıcı adı");
@@ -76,8 +76,7 @@ public class AuthView extends VBox {
         VBox card = new VBox(14, titleLabel, subtitleLabel, formBox, feedbackLabel, submitButton, toggleModeLink);
         card.setAlignment(Pos.CENTER_LEFT);
         card.setMaxWidth(360);
-        card.setPadding(new Insets(28));
-        card.setStyle("-fx-background-color: -color-bg-default; -fx-border-color: -color-border-default; -fx-border-radius: 8; -fx-background-radius: 8;");
+        card.getStyleClass().add("ml-auth-card");
 
         getChildren().add(card);
     }
@@ -125,8 +124,8 @@ public class AuthView extends VBox {
 
     private void showFeedback(String message, boolean isError) {
         feedbackLabel.setText(message);
-        feedbackLabel.getStyleClass().removeAll(Styles.DANGER, Styles.SUCCESS);
-        feedbackLabel.getStyleClass().add(isError ? Styles.DANGER : Styles.SUCCESS);
+        feedbackLabel.getStyleClass().removeAll("ml-feedback-error", "ml-feedback-success");
+        feedbackLabel.getStyleClass().add(isError ? "ml-feedback-error" : "ml-feedback-success");
         feedbackLabel.setVisible(true);
         feedbackLabel.setManaged(true);
     }

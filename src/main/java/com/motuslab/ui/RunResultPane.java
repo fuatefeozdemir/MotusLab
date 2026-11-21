@@ -10,7 +10,6 @@ import com.motuslab.model.RunStatusHistory;
 import com.motuslab.model.SimulationRun;
 import com.motuslab.service.CsvExportService;
 import com.motuslab.service.SimulationRunService;
-import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.chart.LineChart;
 import javafx.scene.chart.NumberAxis;
@@ -65,7 +64,7 @@ public class RunResultPane extends VBox {
 
         if (run == null) {
             Label empty = new Label("Henüz bir çalıştırma kaydı yok.");
-            empty.getStyleClass().add(Styles.TEXT_MUTED);
+            empty.getStyleClass().add("ml-muted");
             getChildren().add(empty);
             return;
         }
@@ -73,7 +72,7 @@ public class RunResultPane extends VBox {
         boolean canManage = experiment != null && simulationRunService.canManageRun(experiment, run);
 
         Label titleLabel = new Label(run.getDisplayName());
-        titleLabel.getStyleClass().add(Styles.TITLE_4);
+        titleLabel.getStyleClass().add("ml-section-title");
 
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
@@ -126,15 +125,14 @@ public class RunResultPane extends VBox {
             notesBody.setWrapText(true);
 
             VBox notesBox = new VBox(4, notesTitle, notesBody);
-            notesBox.setPadding(new Insets(10, 12, 10, 12));
-            notesBox.setStyle("-fx-border-color: -color-border-default; -fx-border-radius: 6;");
+            notesBox.getStyleClass().add("ml-info-box");
             getChildren().add(notesBox);
         }
 
         if ("FAILED".equals(run.getStatus())) {
             Label errLabel = new Label("Çalıştırma başarısız oldu: " +
                     (run.getErrorMessage() != null ? run.getErrorMessage() : "Bilinmeyen hata"));
-            errLabel.getStyleClass().add(Styles.DANGER);
+            errLabel.getStyleClass().add("ml-feedback-error");
             errLabel.setWrapText(true);
             getChildren().add(errLabel);
             renderAuditSection(run);
@@ -143,7 +141,7 @@ public class RunResultPane extends VBox {
 
         if (!isCompleted) {
             Label statusLabel = new Label("Durum: " + run.getStatus());
-            statusLabel.getStyleClass().add(Styles.TEXT_MUTED);
+            statusLabel.getStyleClass().add("ml-muted");
             getChildren().add(statusLabel);
             renderAuditSection(run);
             return;
@@ -152,11 +150,10 @@ public class RunResultPane extends VBox {
         FlowPane metricsPane = new FlowPane(12, 12);
         for (RunMetric m : metrics) {
             VBox card = new VBox(4);
-            card.setPadding(new Insets(10, 14, 10, 14));
-            card.setStyle("-fx-border-color: -color-border-default; -fx-border-radius: 6; -fx-background-radius: 6;");
+            card.getStyleClass().add("ml-metric-card");
 
             Label name = new Label(formatMetricName(m.getMetricCode()));
-            name.getStyleClass().add(Styles.TEXT_MUTED);
+            name.getStyleClass().add("ml-muted");
 
             Label val = new Label(String.format(Locale.US, "%.3f %s", m.getMetricValue(), m.getUnit()));
             val.getStyleClass().add(Styles.TITLE_4);
@@ -224,8 +221,7 @@ public class RunResultPane extends VBox {
             List<RunStatusHistory> history = simulationRunService.getStatusHistoryByRun(run.getId());
 
             VBox snapshotBox = new VBox(8);
-            snapshotBox.setPadding(new Insets(12));
-            snapshotBox.setStyle("-fx-border-color: -color-border-default; -fx-border-radius: 6;");
+            snapshotBox.getStyleClass().add("ml-info-box");
             Label snapTitle = new Label("Kullanılan Parametreler (Snapshot)");
             snapTitle.getStyleClass().add(Styles.TEXT_BOLD);
 
@@ -235,15 +231,14 @@ public class RunResultPane extends VBox {
             int sRow = 0;
             for (RunParameterSnapshot snap : snapshots) {
                 Label name = new Label(snap.getParameterName());
-                name.getStyleClass().add(Styles.TEXT_MUTED);
+                name.getStyleClass().add("ml-muted");
                 Label val = new Label(String.format(Locale.US, "%s %s", snap.getValue(), snap.getUnit()));
                 snapGrid.addRow(sRow++, name, val);
             }
             snapshotBox.getChildren().addAll(snapTitle, snapGrid);
 
             VBox historyBox = new VBox(8);
-            historyBox.setPadding(new Insets(12));
-            historyBox.setStyle("-fx-border-color: -color-border-default; -fx-border-radius: 6;");
+            historyBox.getStyleClass().add("ml-info-box");
             Label histTitle = new Label("Durum Geçmişi");
             histTitle.getStyleClass().add(Styles.TEXT_BOLD);
 
@@ -256,7 +251,7 @@ public class RunResultPane extends VBox {
                 String time = h.getChangedAt() != null ? h.getChangedAt().format(TIME_FMT) : "-";
                 Label transLabel = new Label(transition);
                 Label timeLabel = new Label(time);
-                timeLabel.getStyleClass().add(Styles.TEXT_MUTED);
+                timeLabel.getStyleClass().add("ml-muted");
                 histGrid.addRow(hRow++, transLabel, timeLabel);
             }
             historyBox.getChildren().addAll(histTitle, histGrid);

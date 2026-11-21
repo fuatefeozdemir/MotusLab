@@ -73,3 +73,31 @@
 .ml-feedback-success {
     -fx-text-fill: -ml-success;
 }
+
+/* --- Auth ve Sonuç Kartları --- */
+.ml-auth-card {
+    -fx-background-color: -ml-bg-surface;
+    -fx-border-color: -ml-border;
+    -fx-border-width: 1;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-padding: 28;
+}
+
+.ml-metric-card {
+    -fx-background-color: -ml-bg-surface;
+    -fx-border-color: -ml-border;
+    -fx-border-width: 1;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+    -fx-padding: 10 14 10 14;
+}
+
+.ml-info-box {
+    -fx-background-color: -ml-bg-surface;
+    -fx-border-color: -ml-border;
+    -fx-border-width: 1;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+    -fx-padding: 12;
+}
