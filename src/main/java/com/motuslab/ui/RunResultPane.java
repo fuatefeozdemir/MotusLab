@@ -15,7 +15,9 @@ import javafx.geometry.Pos;
 import javafx.scene.chart.LineChart;
 import javafx.scene.chart.NumberAxis;
 import javafx.scene.chart.XYChart;
+import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
 import javafx.scene.control.Separator;
 import javafx.scene.layout.FlowPane;
@@ -32,6 +34,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.function.ToDoubleFunction;
 
 public class RunResultPane extends VBox {
@@ -42,16 +45,19 @@ public class RunResultPane extends VBox {
     private final SimulationRunService simulationRunService;
     private final CsvExportService csvExportService;
     private final BiConsumer<String, Boolean> feedbackCallback;
+    private final Consumer<Integer> onRunsChanged;
 
     public RunResultPane(
             SimulationRunService simulationRunService,
             CsvExportService csvExportService,
-            BiConsumer<String, Boolean> feedbackCallback
+            BiConsumer<String, Boolean> feedbackCallback,
+            Consumer<Integer> onRunsChanged
     ) {
         super(14);
         this.simulationRunService = simulationRunService;
         this.csvExportService = csvExportService;
         this.feedbackCallback = feedbackCallback;
+        this.onRunsChanged = onRunsChanged;
     }
 
     public void render(Experiment experiment, SimulationRun run) {
@@ -64,6 +70,67 @@ public class RunResultPane extends VBox {
             return;
         }
 
+        boolean canManage = experiment != null && simulationRunService.canManageRun(experiment, run);
+
+        Label titleLabel = new Label(run.getDisplayName());
+        titleLabel.getStyleClass().add(Styles.TITLE_4);
+
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+
+        HBox headerRow = new HBox(8, titleLabel, spacer);
+        headerRow.setAlignment(Pos.CENTER_LEFT);
+
+        List<RunMetric> metrics = List.of();
+        List<RunSample> samples = List.of();
+        boolean isCompleted = "COMPLETED".equals(run.getStatus());
+
+        if (isCompleted) {
+            try {
+                metrics = simulationRunService.getMetricsByRun(run.getId());
+                samples = simulationRunService.getSamplesByRun(run.getId());
+            } catch (MotusLabException ex) {
+                feedbackCallback.accept(ex.getMessage(), true);
+                return;
+            }
+
+            List<RunMetric> finalMetrics = metrics;
+            List<RunSample> finalSamples = samples;
+            Button exportCsvBtn = new Button("CSV Dışa Aktar");
+            exportCsvBtn.setOnAction(e -> handleExportCsv(experiment, run, finalMetrics, finalSamples));
+            headerRow.getChildren().add(exportCsvBtn);
+        }
+
+        if (canManage) {
+            Button editBtn = new Button("Düzenle");
+            editBtn.setOnAction(e -> {
+                if (EditRunDialog.show(run, simulationRunService)) {
+                    feedbackCallback.accept("Çalıştırma bilgileri güncellendi.", false);
+                    onRunsChanged.accept(run.getId());
+                }
+            });
+
+            Button deleteBtn = new Button("Sil");
+            deleteBtn.getStyleClass().add(Styles.DANGER);
+            deleteBtn.setOnAction(e -> handleDeleteRun(run));
+
+            headerRow.getChildren().addAll(editBtn, deleteBtn);
+        }
+
+        getChildren().add(headerRow);
+
+        if (run.getNotes() != null && !run.getNotes().isBlank()) {
+            Label notesTitle = new Label("Notlar");
+            notesTitle.getStyleClass().add(Styles.TEXT_BOLD);
+            Label notesBody = new Label(run.getNotes());
+            notesBody.setWrapText(true);
+
+            VBox notesBox = new VBox(4, notesTitle, notesBody);
+            notesBox.setPadding(new Insets(10, 12, 10, 12));
+            notesBox.setStyle("-fx-border-color: -color-border-default; -fx-border-radius: 6;");
+            getChildren().add(notesBox);
+        }
+
         if ("FAILED".equals(run.getStatus())) {
             Label errLabel = new Label("Çalıştırma başarısız oldu: " +
                     (run.getErrorMessage() != null ? run.getErrorMessage() : "Bilinmeyen hata"));
@@ -74,7 +141,7 @@ public class RunResultPane extends VBox {
             return;
         }
 
-        if (!"COMPLETED".equals(run.getStatus())) {
+        if (!isCompleted) {
             Label statusLabel = new Label("Durum: " + run.getStatus());
             statusLabel.getStyleClass().add(Styles.TEXT_MUTED);
             getChildren().add(statusLabel);
@@ -82,73 +149,73 @@ public class RunResultPane extends VBox {
             return;
         }
 
-        try {
-            List<RunMetric> metrics = simulationRunService.getMetricsByRun(run.getId());
-            List<RunSample> samples = simulationRunService.getSamplesByRun(run.getId());
+        FlowPane metricsPane = new FlowPane(12, 12);
+        for (RunMetric m : metrics) {
+            VBox card = new VBox(4);
+            card.setPadding(new Insets(10, 14, 10, 14));
+            card.setStyle("-fx-border-color: -color-border-default; -fx-border-radius: 6; -fx-background-radius: 6;");
 
-            Label metricsTitle = new Label("Sonuç Metrikleri (Run #" + run.getRunNumber() + ")");
-            metricsTitle.getStyleClass().add(Styles.TITLE_4);
+            Label name = new Label(formatMetricName(m.getMetricCode()));
+            name.getStyleClass().add(Styles.TEXT_MUTED);
 
-            Region spacer = new Region();
-            HBox.setHgrow(spacer, Priority.ALWAYS);
+            Label val = new Label(String.format(Locale.US, "%.3f %s", m.getMetricValue(), m.getUnit()));
+            val.getStyleClass().add(Styles.TITLE_4);
 
-            Button exportCsvBtn = new Button("CSV Dışa Aktar");
-            exportCsvBtn.setOnAction(e -> handleExportCsv(experiment, run, metrics, samples));
-
-            HBox headerRow = new HBox(10, metricsTitle, spacer, exportCsvBtn);
-            headerRow.setAlignment(Pos.CENTER_LEFT);
-
-            FlowPane metricsPane = new FlowPane(12, 12);
-            for (RunMetric m : metrics) {
-                VBox card = new VBox(4);
-                card.setPadding(new Insets(10, 14, 10, 14));
-                card.setStyle("-fx-border-color: -color-border-default; -fx-border-radius: 6; -fx-background-radius: 6;");
-
-                Label name = new Label(formatMetricName(m.getMetricCode()));
-                name.getStyleClass().add(Styles.TEXT_MUTED);
-
-                Label val = new Label(String.format(Locale.US, "%.3f %s", m.getMetricValue(), m.getUnit()));
-                val.getStyleClass().add(Styles.TITLE_4);
-
-                card.getChildren().addAll(name, val);
-                metricsPane.getChildren().add(card);
-            }
-
-            List<RunSample> sampled = downsample(samples, MAX_CHART_POINTS);
-            boolean is2D = experiment != null && "PROJECTILE_2D".equals(experiment.getSimulationTypeCode());
-
-            HBox chartsBox = new HBox(16);
-            if (is2D) {
-                LineChart<Number, Number> trajectoryChart = buildChart(
-                        "Yörünge (y - x)", "Konum x (m)", "Yükseklik y (m)", sampled,
-                        RunSample::getPositionX, s -> s.getPositionY() != null ? s.getPositionY() : 0.0
-                );
-                LineChart<Number, Number> speedChart = buildChart(
-                        "Hız Büyüklüğü - Zaman", "Zaman (s)", "Hız (m/s)", sampled,
-                        RunSample::getTimeSeconds, s -> Math.hypot(s.getVelocityX(), s.getVelocityY() != null ? s.getVelocityY() : 0.0)
-                );
-                HBox.setHgrow(trajectoryChart, Priority.ALWAYS);
-                HBox.setHgrow(speedChart, Priority.ALWAYS);
-                chartsBox.getChildren().addAll(trajectoryChart, speedChart);
-            } else {
-                LineChart<Number, Number> posChart = buildChart(
-                        "Konum - Zaman", "Zaman (s)", "Konum x (m)", sampled,
-                        RunSample::getTimeSeconds, RunSample::getPositionX
-                );
-                LineChart<Number, Number> velChart = buildChart(
-                        "Hız - Zaman", "Zaman (s)", "Hız vx (m/s)", sampled,
-                        RunSample::getTimeSeconds, RunSample::getVelocityX
-                );
-                HBox.setHgrow(posChart, Priority.ALWAYS);
-                HBox.setHgrow(velChart, Priority.ALWAYS);
-                chartsBox.getChildren().addAll(posChart, velChart);
-            }
-
-            getChildren().addAll(headerRow, metricsPane, chartsBox);
-            renderAuditSection(run);
-        } catch (MotusLabException ex) {
-            feedbackCallback.accept(ex.getMessage(), true);
+            card.getChildren().addAll(name, val);
+            metricsPane.getChildren().add(card);
         }
+
+        List<RunSample> sampled = downsample(samples, MAX_CHART_POINTS);
+        boolean is2D = experiment != null && "PROJECTILE_2D".equals(experiment.getSimulationTypeCode());
+
+        HBox chartsBox = new HBox(16);
+        if (is2D) {
+            LineChart<Number, Number> trajectoryChart = buildChart(
+                    "Yörünge (y - x)", "Konum x (m)", "Yükseklik y (m)", sampled,
+                    RunSample::getPositionX, s -> s.getPositionY() != null ? s.getPositionY() : 0.0
+            );
+            LineChart<Number, Number> speedChart = buildChart(
+                    "Hız Büyüklüğü - Zaman", "Zaman (s)", "Hız (m/s)", sampled,
+                    RunSample::getTimeSeconds, s -> Math.hypot(s.getVelocityX(), s.getVelocityY() != null ? s.getVelocityY() : 0.0)
+            );
+            HBox.setHgrow(trajectoryChart, Priority.ALWAYS);
+            HBox.setHgrow(speedChart, Priority.ALWAYS);
+            chartsBox.getChildren().addAll(trajectoryChart, speedChart);
+        } else {
+            LineChart<Number, Number> posChart = buildChart(
+                    "Konum - Zaman", "Zaman (s)", "Konum x (m)", sampled,
+                    RunSample::getTimeSeconds, RunSample::getPositionX
+            );
+            LineChart<Number, Number> velChart = buildChart(
+                    "Hız - Zaman", "Zaman (s)", "Hız vx (m/s)", sampled,
+                    RunSample::getTimeSeconds, RunSample::getVelocityX
+            );
+            HBox.setHgrow(posChart, Priority.ALWAYS);
+            HBox.setHgrow(velChart, Priority.ALWAYS);
+            chartsBox.getChildren().addAll(posChart, velChart);
+        }
+
+        getChildren().addAll(metricsPane, chartsBox);
+        renderAuditSection(run);
+    }
+
+    private void handleDeleteRun(SimulationRun run) {
+        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+        confirm.setTitle("Çalıştırmayı Sil");
+        confirm.setHeaderText(run.getDisplayName());
+        confirm.setContentText("Bu çalıştırma ve tüm sonuç verileri kalıcı olarak silinecek. Emin misiniz?");
+
+        confirm.showAndWait().ifPresent(result -> {
+            if (result == ButtonType.OK) {
+                try {
+                    simulationRunService.deleteRun(run.getId());
+                    feedbackCallback.accept(run.getDisplayName() + " silindi.", false);
+                    onRunsChanged.accept(null);
+                } catch (MotusLabException ex) {
+                    feedbackCallback.accept(ex.getMessage(), true);
+                }
+            }
+        });
     }
 
     private void renderAuditSection(SimulationRun run) {

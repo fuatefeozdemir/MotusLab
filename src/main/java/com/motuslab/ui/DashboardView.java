@@ -65,8 +65,16 @@ public class DashboardView extends BorderPane {
         this.simulationRunService = simulationRunService;
         this.memberService = memberService;
         this.onLogout = onLogout;
-        this.runResultPane = new RunResultPane(simulationRunService, new CsvExportService(), this::showFeedback);
-
+        this.runResultPane = new RunResultPane(
+                simulationRunService,
+                new CsvExportService(),
+                this::showFeedback,
+                selectRunId -> {
+                    if (selectedExperiment != null) {
+                        loadRuns(selectedExperiment.getId(), selectRunId);
+                    }
+                }
+        );
         initTopBar();
         initLeftPanel();
         initCenterPanel();
@@ -162,7 +170,7 @@ public class DashboardView extends BorderPane {
                     setGraphic(null);
                 } else {
                     String time = item.getCreatedAt() != null ? item.getCreatedAt().format(DATE_FMT) : "-";
-                    Label top = new Label("Run #" + item.getRunNumber() + " — " + item.getStatus());
+                    Label top = new Label(item.getDisplayName() + " • " + item.getStatus());
                     top.getStyleClass().add(Styles.TEXT_BOLD);
                     if ("FAILED".equals(item.getStatus())) {
                         top.getStyleClass().add(Styles.DANGER);
