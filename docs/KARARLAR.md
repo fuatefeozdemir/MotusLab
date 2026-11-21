@@ -1,6 +1,6 @@
 # MotusLab — Proje ve Mimari Kararlar Dokümanı
 
-Bu doküman, **MotusLab – Deney ve Simülasyon Verisi Yönetim Sistemi** projesinin ilk sürümü (Veritabanı Yönetim Sistemleri ders projesi) için kesinleştirilen kapsam, teknoloji yığını, yetkilendirme kuralları, veritabanı tasarımı, simülasyon sınırları ve katmanlı mimari kararlarını içerir.
+Bu doküman, **MotusLab – Deney ve Simülasyon Verisi Yönetim Sistemi** projesinin ilk sürümü (Veritabanı Yönetim Sistemleri ders projesi) için uygulanan kapsam, teknoloji yığını, yetkilendirme kuralları, veritabanı tasarımı, simülasyon sınırları ve katmanlı mimari kararlarını belgeler.
 
 ---
 
@@ -8,15 +8,14 @@ Bu doküman, **MotusLab – Deney ve Simülasyon Verisi Yönetim Sistemi** proje
 
 * **Aşama 1 (Aktif Kapsam — Ders Projesi):** Yerel bilgisayarda çalışan, PostgreSQL veritabanına doğrudan bağlanan, dersin tüm veritabanı ve uygulama gereksinimlerini eksiksiz karşılayan masaüstü uygulaması.
 * **Aşama 2 (Gelecek Kapsam — Şimdilik Dışarıda):** Bulut veritabanı (ör. Supabase), ayrı API sunucusu, uzaktan çoklu kullanıcı eşzamanlı çalışması ve ileri seviye simülasyon motorları.
-* **Geçiş Uyumluluğu Kuralı:** Aşama 2'ye geçişi kolaylaştırmak için veritabanı erişimi yalnızca `dao` katmanında, fiziksel hesaplamalar ise yalnızca `simulation` katmanında izole edilir. Arayüz (`controller`) sınıfları doğrudan SQL sorgusu veya fizik formülü barındırmaz.
+* **Katman İzolasyonu Kuralı:** Veritabanı erişimi yalnızca `dao` katmanında, iş kuralları ve yetki kontrolleri `service` katmanında, fiziksel hesaplamalar ise yalnızca `simulation` katmanında izole edilir. Arayüz (`ui`) sınıfları doğrudan SQL sorgusu veya fizik formülü barındırmaz.
 
 ### İlk Sürümde Kapsam Dışı Tutulanlar
-İlk sürümde gereksiz karmaşıklık yaratmamak için aşağıdaki yapılar eklenmeyecektir:
+İlk sürümde gereksiz karmaşıklık yaratmamak için aşağıdaki yapılar eklenmemiştir:
 * HikariCP ve bağlantı havuzu
 * Spring Boot ve REST API
-* Repository katmanı, Dependency Injection framework veya ek tasarım kalıbı altyapıları (Factory/Strategy vb.)
-* Parametre preset (şablon) sistemi
-* Dinamik eklenti tabanlı simülasyon yükleyici
+* ORM araçları (Hibernate / JPA) ve Dependency Injection framework'leri
+* Parametre preset (şablon) sistemi ve dinamik eklenti yükleyici
 * Karmaşık loglama/izleme altyapısı ve bulut dağıtımı
 
 ---
@@ -25,186 +24,174 @@ Bu doküman, **MotusLab – Deney ve Simülasyon Verisi Yönetim Sistemi** proje
 
 | Alan | Seçilen Teknoloji | Tercih Nedeni |
 | :--- | :--- | :--- |
-| **Programlama Dili** | Java | Ders zorunluluğu, güçlü tip güvenliği ve çapraz platform desteği. |
-| **Masaüstü Arayüzü** | JavaFX + FXML (Scene Builder) | Modern masaüstü arayüzleri ve görsel tasarım kolaylığı. |
+| **Programlama Dili** | Java 25 | Ders zorunluluğu, güçlü tip güvenliği, `record` desteği ve çapraz platform çalışma. |
+| **Masaüstü Arayüzü** | JavaFX 25 (Programatik UI) | FXML/Scene Builder karmaşıklığı olmadan bileşen ve diyalogların doğrudan tip güvenli Java koduyla modüler yönetimi. |
 | **Arayüz Tasarımı** | AtlantaFX + Ikonli | Ekstra karmaşık CSS yazmadan modern tema ve vektör ikon desteği. |
-| **Veritabanı** | PostgreSQL (Yerel) | Ders zorunluluğu, hafif kurulum, güçlü kısıt/procedure/trigger desteği. |
-| **Veritabanı Erişimi** | Saf JDBC | SQL, Stored Procedure ve Trigger çağrılarında tam kontrol (ORM yok). |
+| **Veritabanı** | PostgreSQL (Yerel) | Ders zorunluluğu, güçlü kısıt, stored function ve trigger desteği. |
+| **Veritabanı Erişimi** | Saf JDBC | SQL, Stored Function, Trigger ve transaction yönetiminde tam kontrol. |
 | **Parola Güvenliği** | jBCrypt (BCrypt) | Otomatik tuzlama (salt) ile güvenli parola saklama. |
-| **Bağımlılık Yönetimi** | Maven (`pom.xml`) | Kütüphane ve derleme süreçlerinin standart yönetimi. |
+| **Test Altyapısı** | JUnit 5 (`junit-jupiter`) | Fizik motoru hesaplamalarının ve validasyon kurallarının otomatik birim testleri. |
+| **Bağımlılık Yönetimi** | Maven (`pom.xml`) | Kütüphane, derleme ve test süreçlerinin standart yönetimi. |
 
 ### 2.1. Maven (`pom.xml`) Bağımlılıkları
-* **JavaFX Controls:** Arayüz bileşenleri ve grafikler (`JavaFX Charts` bu modüle dahildir).
-* **JavaFX FXML:** FXML ekran yükleme ve bağlama.
+* **JavaFX Controls & FXML:** Arayüz bileşenleri ve `LineChart` grafikleri.
 * **PostgreSQL JDBC Driver:** Veritabanı bağlantısı.
 * **jBCrypt:** Parola hash üretimi ve doğrulama.
 * **AtlantaFX:** Uygulama teması.
-* **Ikonli:** Vektör ikon setleri.
+* **Ikonli (`ikonli-javafx`, `ikonli-feather-pack`):** Vektör ikon setleri.
+* **JUnit Jupiter (`scope: test`):** Birim testleri ve `maven-surefire-plugin`.
 
 ### 2.2. Veritabanı Bağlantısı ve Yapılandırma Güvenliği
-* `DatabaseConnection` her ihtiyaç duyulduğunda yeni bir `Connection` üretir; tek bir statik bağlantı uygulama boyunca paylaşılmaz.
+* `config.DatabaseConnection` her ihtiyaç duyulduğunda yeni bir `Connection` üretir; tek bir statik bağlantı uygulama boyunca paylaşılmaz.
 * Tüm DAO metotları bağlantıyı `try-with-resources` bloğunda açıp kapatır ve SQL enjeksiyonuna karşı `PreparedStatement` kullanır.
-* Bağlantı ve sorgu hataları uygun şekilde servis katmanına iletilir.
-* Veritabanı adresi, kullanıcı adı ve parola kaynak kodda tutulmaz; proje kökündeki `config/database.properties` dosyasından okunur. Bu dosya `.gitignore` içine eklenir; depoda yalnızca parolasız örnek yapılandırma dosyası paylaşılır.
+* Çok adımlı yazma/silme işlemleri (deney oluşturma, parametre güncelleme, deney silme) `conn.setAutoCommit(false)` ile transaction içinde yürütülür; hata durumunda `rollback` yapılır.
+* Veritabanı bağlantı bilgileri kaynak kodda tutulmaz; `src/main/resources/config.properties` dosyasından okunur. Bu dosya `.gitignore` içinde yer alır; repoda şifresiz `src/main/resources/config.properties.example` şablonu paylaşılır.
 
-### 2.3. Parola Güvenliği (`PasswordUtil`)
-* Parolalar hiçbir zaman açık metin olarak saklanmaz.
-* Kullanıcı oluşturulurken BCrypt hash üretilir; giriş sırasında girilen parola bu hash ile doğrulanır.
-* Pasif (`is_active = false`) kullanıcılar doğru parola girse bile sisteme giriş yapamaz.
-* Parola verileri kullanıcı listelerinde veya arayüzde gösterilmez.
+### 2.3. Parola, Oturum ve Hata Yönetimi
+* **Parola Güvenliği:** Parolalar açık metin olarak saklanmaz; `AuthService` içinde BCrypt ile hash'lenir ve doğrulanır. Pasif (`is_active = false`) kullanıcılar doğru parola girse bile giriş yapamaz.
+* **Oturum Yönetimi:** Aktif kullanıcı bilgisi `service.SessionManager` üzerinden tutulur; yetki gerektiren tüm servis metotları oturum kontrolü yapar.
+* **Özel İstisna Hiyerarşisi (`exception/`):** Tüm uygulama hataları `MotusLabException` temel sınıfından türer:
+  * `DataAccessException` (JDBC/SQL hataları)
+  * `ValidationException` (geçersiz girdi veya iş kuralı ihlali)
+  * `AuthorizationException` (yetkisiz işlem)
+  * `NotFoundException` (kayıt bulunamadı)
+  * `ExportException` (CSV dışa aktarma hataları)
 
 ---
 
 ## 3. Roller, Yetkilendirme ve CRUD Politikası
 
 ### 3.1. Rol ve Yetki Matrisi
-Yönetici (`ADMIN`) temel olarak kullanıcı ve sistem yönetiminden sorumludur; araştırmacıların deney oluşturma, düzenleme veya çalıştırma akışlarına doğrudan müdahale etmez.
+Sistemde iki temel rol bulunur: `ADMIN` ve `RESEARCHER`. Sisteme kayıt olan ilk kullanıcı otomatik olarak `ADMIN`, sonraki kullanıcılar `RESEARCHER` rolüyle oluşturulur.
 
 | İşlem | Admin | Deney Sahibi | `EDIT` Üyesi | `RUN` Üyesi | `VIEW` Üyesi |
 | :--- | :---: | :---: | :---: | :---: | :---: |
-| **Tüm deneyleri görüntüleme** | Evet | Yalnızca kendi | Paylaşılan | Paylaşılan | Paylaşılan |
-| **Deney oluşturma** | Hayır | Evet | Hayır | Hayır | Hayır |
-| **Deney bilgilerini düzenleme** | Hayır | Evet | Evet | Hayır | Hayır |
-| **Simülasyon çalıştırma** | Hayır | Evet | Evet | Evet | Hayır |
-| **Deney arşivleme** | Evet | Evet | Hayır | Hayır | Hayır |
-| **Paylaşım yönetimi** | Hayır | Evet | Hayır | Hayır | Hayır |
-| **Kullanıcı yönetimi** | Evet | Hayır | Hayır | Hayır | Hayır |
+| **Erişilebilir deneyleri görüntüleme** | Kendi + Paylaşılan | Kendi + Paylaşılan | Paylaşılan | Paylaşılan | Paylaşılan |
+| **Deney oluşturma** | Evet | Evet | — | — | — |
+| **Deney başlık/açıklama/parametre düzenleme** | Evet (arşivli değilse) | Evet (arşivli değilse) | Evet (arşivli değilse) | Hayır | Hayır |
+| **Simülasyon çalıştırma** | Sahip/Üye ise | Evet (arşivli değilse) | Evet (arşivli değilse) | Evet (arşivli değilse) | Hayır |
+| **Deney arşivleme / arşivden çıkarma** | Evet | Evet | Hayır | Hayır | Hayır |
+| **Deney silme** | Evet | Evet | Hayır | Hayır | Hayır |
+| **Paylaşım yönetimi** | Evet | Evet | Hayır | Hayır | Hayır |
+| **Kullanıcı yönetimi (rol & aktif/pasif)** | Evet | Hayır | Hayır | Hayır | Hayır |
+
+* **Admin Paneli Güvenlik Kuralları (`AdminService`):** Yönetici kendi hesabını pasife alamaz ve kendi `ADMIN` rolünü düşüremez. Bu kural hem arayüzde (`AdminPanelDialog`) hem de servis katmanında zorunlu tutulur.
 
 ### 3.2. Deney Paylaşım Kuralları (`ExperimentMember`)
-* Deney sahipliği `experiments.owner_id` üzerinden temsil edilir; deney sahibi `experiment_members` tablosunda normal üye olarak tutulmaz ve yetkileri bu tablodan bağımsızdır.
-* Aynı kullanıcı aynı deneye iki kez eklenemez.
-* Deney sahibi kendisini üye olarak ekleyemez.
+* Deney sahipliği `experiments.owner_id` üzerinden temsil edilir; deney sahibi `experiment_members` tablosunda üye olarak tutulmaz.
+* Aynı kullanıcı aynı deneye iki kez eklenemez; deney sahibi kendisini üye olarak ekleyemez.
 * Yetkiler hiyerarşiktir: `EDIT` yetkisi `RUN` ve `VIEW` yetkilerini; `RUN` yetkisi `VIEW` yetkisini kapsar.
 
 ### 3.3. CRUD Varlıkları ve Silme / Arşivleme Politikası
-Dersin "en az 3 ilişkili varlıkta tam CRUD" gereksinimi şu üç varlık üzerinden karşılanır:
+Dersin "en az 3 ilişkili varlıkta tam CRUD" gereksinimi aşağıdaki varlıklar üzerinden karşılanır:
 
 | Varlık | Ekleme / Listeleme / Güncelleme | Silme / Pasifleştirme Politikası |
 | :--- | :--- | :--- |
-| **Kullanıcılar (`users`)** | Yönetici panelinden tam yönetim | Varsayılan olarak pasifleştirme (`is_active = false`); bağlı kaydı bulunmayan kullanıcı fiziksel olarak silinebilir. |
-| **Deneyler (`experiments`)** | Araştırmacı / Deney sahibi tarafından tam yönetim | Fiziksel silme yoktur; **arşivleme** (`is_archived = true`) uygulanır. Geçmiş çalıştırmalar korunur; arşivli deneyde yeni çalıştırma başlatılamaz. |
-| **Deney Üyeleri (`experiment_members`)** | Deney sahibi tarafından paylaşım yönetimi | Doğrudan **fiziksel `DELETE`** (dersin silme kriterini doğrudan karşılar). |
+| **Kullanıcılar (`users`)** | Kayıt ekranı (`AuthView`) ve Admin Paneli (`AdminPanelDialog`) üzerinden rol ve durum yönetimi | Hesap pasifleştirme / aktifleştirme (`is_active`). |
+| **Deneyler (`experiments`)** | Oluşturma, arama/filtreleme, başlık/açıklama ve parametre düzenleme | Hem **arşivleme / arşivden çıkarma** (`is_archived`) hem de deney sahibi/admin tarafından transaction içinde **fiziksel silme** desteklenir. Arşivli deneyler salt okunurdur ve yeni çalıştırma başlatılamaz. |
+| **Deney Üyeleri (`experiment_members`)** | Paylaşım penceresinden üye ekleme ve yetki güncelleme | Doğrudan **fiziksel `DELETE`**. |
+| **Çalıştırmalar (`simulation_runs`)** | Simülasyon çalıştırma, deney bazlı sıralı `run_number`, ad (`name`) ve not (`notes`) düzenleme | Tekil çalıştırma **fiziksel `DELETE`** (bağlı snapshot, örnek, metrik ve durum geçmişi `ON DELETE CASCADE` ile temizlenir). |
 
 ---
 
 ## 4. Veritabanı Tasarım Kararları
 
-* **Normalizasyon:** Tüm şema UNF $\rightarrow$ 1NF $\rightarrow$ 2NF $\rightarrow$ 3NF adımları belgelenerek 3NF seviyesinde tasarlanır.
+* **Normalizasyon:** Tüm şema UNF $\rightarrow$ 1NF $\rightarrow$ 2NF $\rightarrow$ 3NF adımlarıyla 3NF seviyesinde tasarlanmıştır (`docs/VERİTABANI.md`).
 * **Deney Türü Değişmezliği:** Bir deneyin simülasyon türü oluşturulurken seçilir ve sonradan değiştirilemez.
+* **Şema ve Başlangıç Verileri:** `src/main/resources/db/motuslab_schema.sql` ve tekrar çalıştırılabilir (idempotent) `src/main/resources/db/motuslab_seed.sql` dosyalarıyla yönetilir.
 
-### 4.1. Veritabanı Tablolarının Tam Listesi
+### 4.1. Veritabanı Tabloları ve Java Eşleşmesi
 
-| Tablo Adı | Görevi | İlgili Java Modeli |
-| :--- | :--- | :--- |
-| `roles` | Sistem rollerini (`ADMIN`, `RESEARCHER`) tutar | — (Enum / alan) |
-| `users` | Kullanıcı hesaplarını ve BCrypt parola hash'lerini tutar | `User` |
-| `simulation_types` | Sabit simülasyon türlerini tanımlar | `SimulationType` |
-| `parameter_definitions` | Her türün parametre adını, birimini, varsayılanını ve sınırlarını tanımlar | `ParameterDefinition` |
-| `experiments` | Deney temel bilgilerini, sahibini ve arşiv durumunu tutar | `Experiment` |
-| `experiment_members` | Paylaşılan deneylerin üyelerini ve yetki seviyelerini tutar | `ExperimentMember` |
-| `experiment_parameters` | Deneyin güncel (düzenlenebilir) parametre değerlerini tutar | — (`ExperimentParameterDAO`) |
-| `simulation_runs` | Simülasyon çalıştırma kayıtlarını ve durumunu tutar | `SimulationRun` |
-| `run_parameter_snapshots` | Çalıştırma anındaki parametrelerin değişmez kopyasını tutar | `RunParameters` |
-| `run_samples` | Her çalıştırmanın zaman serisi örneklerini tutar | `RunSample` |
-| `run_metrics` | Her çalıştırmanın özet metriklerini tutar | `RunMetric` |
-| `run_status_history` | Çalıştırma durum değişikliklerinin denetim geçmişini tutar | — (Trigger yönetir) |
-
-> **Kavram Eşleştirmesi:** SQL tarafındaki `run_parameter_snapshots` tablosu ile Java tarafındaki `RunParameters` modeli aynı kavramı temsil eder.
+| Tablo Adı | Görevi | Java Modeli | Sorumlu DAO |
+| :--- | :--- | :--- | :--- |
+| `roles` | Sistem rollerini (`ADMIN`, `RESEARCHER`) tutar | `Role` | `UserDao` |
+| `users` | Kullanıcı hesapları ve BCrypt hash'leri | `User` | `UserDao` |
+| `simulation_types` | Sabit simülasyon türleri | `SimulationType` | `SimulationTypeDao` |
+| `parameter_definitions` | Parametre adı, birimi, varsayılanı ve alt/üst sınırları | `ParameterDefinition` | `SimulationTypeDao` |
+| `experiments` | Deney temel bilgileri, sahibi ve `is_archived` durumu | `Experiment` | `ExperimentDao` |
+| `experiment_members` | Paylaşılan deney üyeleri ve yetkileri | `ExperimentMember` | `ExperimentMemberDao` |
+| `experiment_parameters` | Deneyin güncel (düzenlenebilir) parametre değerleri | `ExperimentParameter` | `ExperimentDao` |
+| `simulation_runs` | Çalıştırma kayıtları (`run_number`, `name`, `notes`, `status`) | `SimulationRun` | `SimulationRunDao` |
+| `run_parameter_snapshots` | Çalıştırma anındaki parametrelerin değişmez kopyası | `RunParameterSnapshot` | `SimulationRunDao` |
+| `run_samples` | Çalıştırmanın zaman serisi örnekleri | `RunSample` | `SimulationRunDao` |
+| `run_metrics` | Çalıştırmanın özet metrikleri | `RunMetric` | `SimulationRunDao` |
+| `run_status_history` | Çalıştırma durum geçişlerinin denetim geçmişi | `RunStatusHistory` | `SimulationRunDao` (Trigger yazar) |
 
 ### 4.2. Deney Parametreleri ve Çalıştırma Parametreleri Ayrımı
 * `experiment_parameters`: Deneyin güncel parametreleridir; kullanıcı tarafından düzenlenebilir.
-* `run_parameter_snapshots` (`RunParameters`): Çalıştırma başladığı anda alınan değişmez kopyadır.
-
-**Örnek Akış:**
-1. Kullanıcı $20\text{ m/s}$ ilk hız ile deney oluşturur ve ilk çalıştırmayı yapar; `run_parameter_snapshots` içine $20\text{ m/s}$ kaydedilir.
-2. Kullanıcı deney parametresini $30\text{ m/s}$ olarak günceller ve ikinci çalıştırmayı yapar; yeni snapshot içine $30\text{ m/s}$ kaydedilir.
-3. İlk çalıştırmanın parametreleri ve sonuçları değişmeden korunur.
+* `run_parameter_snapshots`: Çalıştırma başladığı anda `sp_create_run_record` tarafından alınan değişmez kopyadır. Deney parametreleri sonradan değiştirilse bile geçmiş çalıştırmaların parametreleri korunur.
 
 ### 4.3. `SimulationRun` Durum Makinesi
-Tek standart durum isimlendirmesi kullanılır: `CREATED`, `RUNNING`, `COMPLETED`, `FAILED`.
-* **İzin verilen geçişler:** `CREATED` $\rightarrow$ `RUNNING` $\rightarrow$ `COMPLETED` veya `FAILED`.
-* `COMPLETED` veya `FAILED` durumuna ulaşmış bir kayıt yeniden `RUNNING` durumuna geçirilemez; tekrar çalıştırma her zaman yeni bir kayıt oluşturur.
+Standart durumlar: `CREATED`, `RUNNING`, `COMPLETED`, `FAILED`.
+* **İzin verilen geçişler:** `CREATED` $\rightarrow$ `RUNNING` $\rightarrow$ `COMPLETED` veya `FAILED` (veya başlatma hatasında `CREATED` $\rightarrow$ `FAILED`).
+* `COMPLETED` veya `FAILED` durumundaki kayıtların durumu değiştirilemez; yeniden çalıştırma her zaman yeni bir kayıt ve yeni bir `run_number` üretir.
 
-### 4.4. Stored Procedure ve Trigger Davranışları
-* **Stored Procedure (`sp_create_run_record`):** Tek bir transaction içerisinde; deneyin varlığını, arşivli olmadığını ve kullanıcının çalıştırma yetkisini doğrular; yeni `simulation_runs` kaydını (`CREATED`) oluşturur; `experiment_parameters` değerlerini `run_parameter_snapshots` tablosuna kopyalar ve oluşturulan `run_id` değerini döndürür.
-* **Trigger (Çalıştırma Durum Takibi):** `simulation_runs` üzerindeki durum güncellemelerini denetler; geçersiz durum geçişlerini reddeder; geçerli geçişlerde eski durumu, yeni durumu ve değişiklik zamanını otomatik olarak `run_status_history` tablosuna kaydeder.
+### 4.4. Stored Function ve Trigger Davranışları
+* **Stored Function (`sp_create_run_record`):** Tek bir veritabanı çağrısında; kullanıcının aktif olduğunu, deneyin varlığını (`FOR UPDATE` satır kilidiyle), arşivli olmadığını ve çalıştırma yetkisini doğrular; deney bazında sıralı `run_number` ($COALESCE(\max(\text{run\_number}), 0) + 1$) hesaplayarak `CREATED` durumunda yeni `simulation_runs` kaydı oluşturur; `experiment_parameters` değerlerini `run_parameter_snapshots` tablosuna kopyalar ve `run_id` döndürür.
+* **Trigger (`trg_simulation_run_status` / `fn_track_simulation_run_status`):** `simulation_runs` üzerindeki `INSERT` ve `UPDATE OF status` işlemlerini denetler; geçersiz durum geçişlerini reddeder ve geçerli geçişleri `run_status_history` tablosuna kaydeder.
 
 ### 4.5. Veri Bütünlüğü Kısıtları
 Veritabanı seviyesinde (`UNIQUE`, `CHECK`, `FOREIGN KEY`) şu kurallar güvence altına alınır:
-* Kullanıcı adı (`username`) benzersizdir; deney adı boş olamaz; deney sahibi geçerli bir kullanıcıdır.
+* `username` ve `email` benzersizdir; deney başlığı boş olamaz.
 * Aynı deneyde aynı kullanıcı birden fazla üyeliğe sahip olamaz (`UNIQUE(experiment_id, user_id)`).
-* Parametre değerleri tanımlı sayısal sınırları aşamaz; zaman adımı pozitiftir ($\Delta t > 0$).
-* Zaman serisi örneklerinde zaman negatif olamaz ($t \ge 0$) ve örnek indeksleri aynı çalıştırma içinde benzersizdir (`UNIQUE(run_id, sample_index)`).
-* Aynı çalıştırmada aynı metrik kodu birden fazla kez bulunamaz (`UNIQUE(run_id, metric_code)`).
-* Deneyin `simulation_type_id` değeri ile parametre tanımının simülasyon türü uyumlu olmalıdır (uygun noktalarda bileşik foreign key ile desteklenir).
+* Aynı deneyde çalıştırma numaraları benzersiz ve pozitiftir (`UNIQUE(experiment_id, run_number)`, `run_number > 0`).
+* Parametre tanımlarında $\text{min\_value} \le \text{default\_value} \le \text{max\_value}$ koşulu zorunludur.
+* Zaman serisi örneklerinde $t \ge 0$, `sample_index >= 0` ve `UNIQUE(run_id, sample_index)` kısıtları vardır.
+* Aynı çalıştırmada aynı metrik kodu tekrarlanamaz (`UNIQUE(run_id, metric_code)`).
+* Deneyin `simulation_type_id` değeri ile parametre tanımının simülasyon türü bileşik foreign key (`(experiment_id, simulation_type_id)` ve `(parameter_definition_id, simulation_type_id)`) ile eşleştirilir.
 
 ---
 
 ## 5. Simülasyon Modelleri, Sınırlar ve Metrikler
 
 ### 5.1. Örnek Sayısı Sınırı ve Genel Kısıtlar
-Tüm modeller sabit zaman adımı ($\Delta t$) ile hesaplanır:
-* $\Delta t \ge 0.01\text{ s}$
-* $T > 0$
+Tüm modeller `PhysicsModel` arayüzünü uygular ve `SimulationEngine` üzerinden simülasyon türü koduna göre çalıştırılır:
+* Zaman adımı: $\Delta t > 0$ (parametre tanımlarında alt sınır $0.001\text{ s}$)
+* Maksimum adım sayısı (`PhysicsModel.MAX_STEPS`):
+$$\left\lceil \frac{T}{\Delta t} \right\rceil \le 50\,000$$
 * Yerçekimi ivmesi: $g > 0$ (varsayılan $9.81\text{ m/s}^2$)
 * Atış açısı: $0^\circ \le \theta \le 90^\circ$
+* Yüksek örnek sayısına sahip çalıştırmalarda JavaFX `LineChart` performansını korumak için çizim öncesinde örnekleme azaltma (downsampling) uygulanır; veritabanında ve CSV dışa aktarımında tüm örnekler korunur.
 
-Toplam örnek sayısı `SimulationService` içerisinde şu formülle doğrulanır:
-$$N = \left\lceil \frac{T}{\Delta t} \right\rceil + 1 \le 10\,000$$
+### 5.2. Hareket Modelleri ve Standart Metrik Kodları
+1. **Düzgün Doğrusal Hareket (`UNIFORM_MOTION` — `UniformMotionModel`):**
+   * Parametreler: `initial_position`, `velocity`, `duration`, `time_step`
+   * Metrikler: `total_time`, `final_position`, `displacement`, `max_speed`
+2. **Sabit İvmeli Hareket (`CONSTANT_ACCEL` — `ConstantAccelerationModel`):**
+   * Parametreler: `initial_position`, `initial_velocity`, `acceleration`, `duration`, `time_step`
+   * Metrikler: `total_time`, `final_position`, `displacement`, `final_velocity`, `max_speed`
+3. **2B Eğik Atış (`PROJECTILE_2D` — `Projectile2DModel`):**
+   * Hava direnci yoktur; başlangıç yüksekliği $y_0 \ge 0$ değerinden cisim yere ulaşana kadar ($y = 0$) sürer. Uçuş süresi $y_0 + v_{y0} t - \frac{1}{2} g t^2 = 0$ denkleminin pozitif köküyle hesaplanır.
+   * Parametreler: `initial_height`, `initial_speed`, `launch_angle`, `gravity`, `time_step`
+   * Metrikler: `flight_time`, `range`, `max_height`, `impact_speed`, `max_speed`
 
-Son örnek tam olarak bitiş zamanına denk gelmiyorsa, bitiş anı ($T$ veya yere çarpma anı) ek bir son örnek olarak üretilir.
-
-### 5.2. Hareket Modelleri ve Bitiş Koşulları
-1. **Düzgün Doğrusal Hareket (`UniformMotionModel`):** Kullanıcının belirlediği toplam süre ($T$) sonunda biter.
-2. **Sabit İvmeli Doğrusal Hareket (`ConstantAccelerationModel`):** Kullanıcının belirlediği toplam süre ($T$) sonunda biter.
-3. **2B Atış Hareketi (`ProjectileMotionModel`):** Hava direnci yoktur. Cisim başlangıç yüksekliğinden ($y_0 \ge 0$) hareket ettikten sonra yere ulaştığında ($y = 0$) biter. Kullanıcının belirlediği maksimum süre üst sınır olarak uygulanır. Başlangıç yüksekliği $y_0 > 0$ olduğunda uçuş süresi hesabında ikinci dereceden denklemin pozitif kökü kullanılır.
-
-### 5.3. Zaman Serisi (`RunSample`) ve Standart Metrik Kodları (`RunMetric`)
-`RunSample` alanları: `sampleIndex`, `timeSeconds`, `positionX`, `positionY` (1B modellerde `null`), `velocityX`, `velocityY` (1B modellerde `null`).
-
-Karşılaştırma ekranında tek tip sorgu kullanılabilmesi için `RunMetric` kodları standartlaştırılmıştır:
-
-| Model | Standart Metrik Kodları |
-| :--- | :--- |
-| **Düzgün Doğrusal Hareket** | `TOTAL_TIME`, `INITIAL_POSITION`, `FINAL_POSITION`, `DISPLACEMENT`, `VELOCITY` |
-| **Sabit İvmeli Hareket** | `TOTAL_TIME`, `INITIAL_VELOCITY`, `FINAL_VELOCITY`, `FINAL_POSITION`, `DISPLACEMENT` |
-| **2B Atış Hareketi** | `FLIGHT_TIME`, `MAX_HEIGHT`, `HORIZONTAL_RANGE`, `IMPACT_SPEED` |
-
-### 5.4. Karşılaştırma Kuralları
-* Yalnızca **aynı deneye** ait ve **`COMPLETED`** durumundaki çalıştırmalar karşılaştırılabilir.
-* Aynı anda **en fazla 3 çalıştırma** seçilebilir.
-* Farklı parametrelerle yapılmış çalıştırmaların karşılaştırılması serbesttir; kullanılan parametreler ekranda gösterilir.
-* Zaman serileri aynı grafikte üst üste çizilir, özet metrikler yan yana tabloda listelenir.
+### 5.3. Karşılaştırma ve Dışa Aktarma Kuralları
+* **Karşılaştırma (`RunComparisonDialog`):** Aynı deneye ait `COMPLETED` durumundaki çalıştırmaların zaman serileri aynı grafikte üst üste çizilir, özet metrikleri yan yana karşılaştırılır.
+* **CSV Dışa Aktarma (`CsvExportService`):** Seçili çalıştırmanın zaman serisi örnekleri UTF-8 CSV dosyası olarak dışa aktarılabilir.
 
 ---
 
-## 6. Arayüz Ekranları, Senaryolar ve Asenkron Yönetim
+## 6. Arayüz Bileşenleri ve Asenkron Yönetim
 
-### 6.1. Temel Ekranlar
-| Ekran (FXML) | İçerik |
+### 6.1. Programatik JavaFX Ekranları ve Diyaloglar (`ui/`)
+| Sınıf | Sorumluluk |
 | :--- | :--- |
-| `Login.fxml` | Kullanıcı girişi ve kimlik doğrulama |
-| `Dashboard.fxml` | Rol bazlı özet, son deneyler, son çalıştırmalar ve navigasyon |
-| `ExperimentList.fxml` | Deney listesi, arama, filtreleme (arşivlenmiş deneyler için ayrı filtre dahil), oluşturma |
-| `ExperimentDetail.fxml` | Deney bilgileri, parametre düzenleme ve simülasyon başlatma |
-| `Results.fxml` | Grafikler, özet metrikler, çalıştırma geçmişi ve karşılaştırma |
-| `Sharing.fxml` | Deney üyeleri ve erişim izinleri yönetimi |
-| `UserManagement.fxml` | Yönetici kullanıcı ve rol yönetimi |
+| `MainApp` | Uygulama giriş noktası, AtlantaFX tema kurulumu, `AuthView` $\leftrightarrow$ `DashboardView` geçişleri |
+| `AuthView` | Kullanıcı girişi ve yeni hesap kaydı |
+| `DashboardView` | Ana çalışma alanı: canlı arama, sahiplik/tür/arşiv filtreleme, deney detayı, parametre düzenleme, asenkron çalıştırma ve çalıştırma geçmişi |
+| `RunResultPane` | Seçili çalıştırmanın özet metrikleri, `LineChart` grafikleri, ad/not düzenleme, silme ve CSV dışa aktarma |
+| `NewExperimentDialog` | Yeni deney oluşturma ve başlangıç parametrelerini girme |
+| `EditExperimentDialog` | Deney başlığı ve açıklamasını güncelleme |
+| `ShareExperimentDialog` | Deney üyelerini listeleme, ekleme, yetki değiştirme ve kaldırma |
+| `EditRunDialog` | Çalıştırma adı (`name`) ve notlarını (`notes`) düzenleme |
+| `RunComparisonDialog` | Tamamlanmış çalıştırmaların grafik ve metrik karşılaştırması |
+| `AdminPanelDialog` | `ADMIN` kullanıcıları için kullanıcı listesi, rol değiştirme ve aktif/pasif yönetimi |
 
-### 6.2. Temel Kullanıcı Senaryoları
-1. Kullanıcı giriş yapar ve rolüne göre dashboard ekranını görür.
-2. Araştırmacı yeni deney oluşturur ve deney parametrelerini günceller.
-3. Araştırmacı simülasyonu çalıştırır, sonuç grafiklerini ve metriklerini inceler.
-4. Araştırmacı geçmiş çalıştırmaları açar ve en fazla 3 çalıştırmayı karşılaştırır.
-5. Deney sahibi başka bir kullanıcıya `VIEW`, `RUN` veya `EDIT` erişimi verir / kaldırır.
-6. Yönetici kullanıcı hesabı oluşturur, günceller veya pasifleştirir.
-7. Kullanıcı arşivlenmiş deneyleri filtreleyerek geçmiş çalıştırma sonuçlarını görüntüler.
-
-### 6.3. Asenkron İşlem ve Hata Yönetimi (`JavaFX Task`)
-* Veritabanı ve simülasyon işlemleri `javafx.concurrent.Task` ile arka plan iş parçacıklarında yürütülür.
-* İşlem sürerken yükleniyor göstergesi gösterilir ve aynı işlemin tekrar başlatılması engellenir.
-* İşlem başarıyla tamamlandığında kullanıcıya bildirim (`AlertHelper`) verilir.
-* Veritabanı bağlantı hatasında anlaşılır hata mesajı gösterilir; simülasyon hesaplaması başarısız olursa ilgili kayıt `FAILED` durumuna çekilir.
+### 6.2. Asenkron İşlem Yönetimi (`JavaFX Task`)
+* Simülasyon çalıştırma işlemi `DashboardView` içinde `javafx.concurrent.Task` ve bir `daemon` arka plan iş parçacığı (`motuslab-sim-runner`) üzerinde yürütülür; böylece uzun süren simülasyonlarda arayüz donmaz.
+* İşlem sırasında çalıştırma butonu pasifleşir ve `ProgressIndicator` gösterilir.
+* Kullanıcı simülasyon sürerken başka bir deneye geçerse, görev tamamlandığında yanlış deneyin listesinin güncellenmemesi için hedef `experimentId` kontrolü yapılır.
+* Hata durumunda ilgili kayıt `FAILED` durumuna geçirilir ve hata mesajı kullanıcıya gösterilir.
 
 ---
 
@@ -213,77 +200,75 @@ Karşılaştırma ekranında tek tip sorgu kullanılabilmesi için `RunMetric` k
 ```text
 MotusLab/
 ├── docs/
-│   └── KARARLAR.md
-├── config/
-│   └── database.properties
+│   ├── KARARLAR.md
+│   └── VERİTABANI.md
 ├── src/
 │   ├── main/
 │   │   ├── java/com/motuslab/
-│   │   │   ├── app/
-│   │   │   │   └── MotusLabApplication.java
+│   │   │   ├── MainApp.java
+│   │   │   ├── config/
+│   │   │   │   └── DatabaseConnection.java
+│   │   │   ├── dao/
+│   │   │   │   ├── ExperimentDao.java
+│   │   │   │   ├── ExperimentMemberDao.java
+│   │   │   │   ├── SimulationRunDao.java
+│   │   │   │   ├── SimulationTypeDao.java
+│   │   │   │   └── UserDao.java
+│   │   │   ├── exception/
+│   │   │   │   ├── AuthorizationException.java
+│   │   │   │   ├── DataAccessException.java
+│   │   │   │   ├── ExportException.java
+│   │   │   │   ├── MotusLabException.java
+│   │   │   │   ├── NotFoundException.java
+│   │   │   │   └── ValidationException.java
 │   │   │   ├── model/
-│   │   │   │   ├── User.java
 │   │   │   │   ├── Experiment.java
 │   │   │   │   ├── ExperimentMember.java
-│   │   │   │   ├── SimulationType.java
+│   │   │   │   ├── ExperimentParameter.java
 │   │   │   │   ├── ParameterDefinition.java
-│   │   │   │   ├── SimulationRun.java
-│   │   │   │   ├── RunParameters.java
+│   │   │   │   ├── Role.java
+│   │   │   │   ├── RunMetric.java
+│   │   │   │   ├── RunParameterSnapshot.java
 │   │   │   │   ├── RunSample.java
-│   │   │   │   └── RunMetric.java
-│   │   │   ├── dao/
-│   │   │   │   ├── UserDAO.java
-│   │   │   │   ├── ExperimentDAO.java
-│   │   │   │   ├── ExperimentMemberDAO.java
-│   │   │   │   ├── ExperimentParameterDAO.java
-│   │   │   │   ├── SimulationRunDAO.java
-│   │   │   │   └── RunSampleDAO.java
+│   │   │   │   ├── RunStatusHistory.java
+│   │   │   │   ├── SimulationRun.java
+│   │   │   │   ├── SimulationType.java
+│   │   │   │   └── User.java
 │   │   │   ├── service/
+│   │   │   │   ├── AdminService.java
 │   │   │   │   ├── AuthService.java
-│   │   │   │   ├── UserService.java
+│   │   │   │   ├── CsvExportService.java
+│   │   │   │   ├── ExperimentMemberService.java
 │   │   │   │   ├── ExperimentService.java
-│   │   │   │   ├── SharingService.java
-│   │   │   │   └── SimulationService.java
+│   │   │   │   ├── SessionManager.java
+│   │   │   │   └── SimulationRunService.java
 │   │   │   ├── simulation/
-│   │   │   │   ├── SimulationModel.java
-│   │   │   │   ├── UniformMotionModel.java
 │   │   │   │   ├── ConstantAccelerationModel.java
-│   │   │   │   ├── ProjectileMotionModel.java
-│   │   │   │   ├── SimulationParameters.java
-│   │   │   │   └── SimulationResult.java
-│   │   │   ├── controller/
-│   │   │   │   ├── LoginController.java
-│   │   │   │   ├── DashboardController.java
-│   │   │   │   ├── ExperimentListController.java
-│   │   │   │   ├── ExperimentDetailController.java
-│   │   │   │   ├── ResultsController.java
-│   │   │   │   ├── SharingController.java
-│   │   │   │   └── UserManagementController.java
-│   │   │   └── util/
-│   │   │       ├── DatabaseConnection.java
-│   │   │       ├── PasswordUtil.java
-│   │   │       ├── SessionManager.java
-│   │   │       ├── AlertHelper.java
-│   │   │       └── Constants.java
+│   │   │   │   ├── PhysicsModel.java
+│   │   │   │   ├── Projectile2DModel.java
+│   │   │   │   ├── SimulationEngine.java
+│   │   │   │   ├── SimulationResult.java
+│   │   │   │   ├── SimulationSample.java
+│   │   │   │   └── UniformMotionModel.java
+│   │   │   └── ui/
+│   │   │       ├── AdminPanelDialog.java
+│   │   │       ├── AuthView.java
+│   │   │       ├── DashboardView.java
+│   │   │       ├── EditExperimentDialog.java
+│   │   │       ├── EditRunDialog.java
+│   │   │       ├── NewExperimentDialog.java
+│   │   │       ├── RunComparisonDialog.java
+│   │   │       ├── RunResultPane.java
+│   │   │       └── ShareExperimentDialog.java
 │   │   └── resources/
-│   │       ├── fxml/
-│   │       │   ├── Login.fxml
-│   │       │   ├── Dashboard.fxml
-│   │       │   ├── ExperimentList.fxml
-│   │       │   ├── ExperimentDetail.fxml
-│   │       │   ├── Results.fxml
-│   │       │   ├── Sharing.fxml
-│   │       │   └── UserManagement.fxml
-│   │       ├── css/
-│   │       │   └── style.css
+│   │       ├── config.properties
+│   │       ├── config.properties.example
 │   │       └── db/
-│   │           └── motuslab_schema.sql
-│   └── test/java/com/motuslab/
-│       ├── simulation/
-│       └── service/
+│   │           ├── motuslab_schema.sql
+│   │           └── motuslab_seed.sql
+│   └── test/
+│       └── java/com/motuslab/simulation/
+│           └── SimulationEngineTest.java
 ├── .gitignore
-├── README.md
 └── pom.xml
 ```
-
-> **Not:** `RunMetric` ve `RunParameters` (`run_parameter_snapshots`) işlemleri ayrı DAO sınıflarına bölünmeden `SimulationRunDAO` içinde yönetilir. `README.md` dosyası projenin amacını, kurulum adımlarını, PostgreSQL kurulumunu ve varsayılan yönetici hesabının oluşturulmasını içerir.
