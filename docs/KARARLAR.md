@@ -26,7 +26,7 @@ Bu doküman, **MotusLab – Deney ve Simülasyon Verisi Yönetim Sistemi** proje
 | :--- | :--- | :--- |
 | **Programlama Dili** | Java 25 | Ders zorunluluğu, güçlü tip güvenliği, `record` desteği ve çapraz platform çalışma. |
 | **Masaüstü Arayüzü** | JavaFX 25 (Programatik UI) | FXML/Scene Builder karmaşıklığı olmadan bileşen ve diyalogların doğrudan tip güvenli Java koduyla modüler yönetimi. |
-| **Arayüz Tasarımı** | AtlantaFX + Ikonli (Feather) + Özel CSS (`motuslab.css`) | Özel marka renk paleti, Neo-Glass yüzeyler, `Inter`/`JetBrains Mono` tipografi ve çizgisel vektör ikonlarla tutarlı tasarım sistemi. |
+| **Arayüz Tasarımı** | AtlantaFX + Ikonli (Feather) + Özel CSS (`motuslab.css`) | Özel marka renk paleti, kontrollü Neo-Glass yüzeyler, `Inter`/`JetBrains Mono` tipografi ve çizgisel vektör ikonlarla tutarlı tasarım sistemi. |
 | **Veritabanı** | PostgreSQL (Yerel) | Ders zorunluluğu, güçlü kısıt, stored function ve trigger desteği. |
 | **Veritabanı Erişimi** | Saf JDBC | SQL, Stored Function, Trigger ve transaction yönetiminde tam kontrol. |
 | **Parola Güvenliği** | jBCrypt (BCrypt) | Otomatik tuzlama (salt) ile güvenli parola saklama. |
@@ -75,7 +75,7 @@ Sistemde iki temel rol bulunur: `ADMIN` ve `RESEARCHER`. Sisteme kayıt olan ilk
 | **Paylaşım yönetimi** | Evet | Evet | Hayır | Hayır | Hayır |
 | **Kullanıcı yönetimi (rol & aktif/pasif)** | Evet | Hayır | Hayır | Hayır | Hayır |
 
-- **Admin Paneli Güvenlik Kuralları (`AdminService`):** Yönetici kendi hesabını pasife alamaz ve kendi `ADMIN` rolünü düşüremez. Bu kural hem arayüzde (`AdminPanelDialog`) hem de servis katmanında zorunlu tutulur.
+- **Yönetim Güvenlik Kuralları (`AdminService`):** Yönetici kendi hesabını pasife alamaz ve kendi `ADMIN` rolünü düşüremez. Bu kural hem arayüzde (`ProfileAdminView`) hem de servis katmanında zorunlu tutulur.
 
 ### 3.2. Deney Paylaşım Kuralları (`ExperimentMember`)
 - Deney sahipliği `experiments.owner_id` üzerinden temsil edilir; deney sahibi `experiment_members` tablosunda üye olarak tutulmaz.
@@ -87,7 +87,7 @@ Dersin "en az 3 ilişkili varlıkta tam CRUD" gereksinimi aşağıdaki varlıkla
 
 | Varlık | Ekleme / Listeleme / Güncelleme | Silme / Pasifleştirme Politikası |
 | :--- | :--- | :--- |
-| **Kullanıcılar (`users`)** | Kayıt ekranı (`AuthView`) ve Admin Paneli (`AdminPanelDialog`) üzerinden rol ve durum yönetimi | Hesap pasifleştirme / aktifleştirme (`is_active`). |
+| **Kullanıcılar (`users`)** | Kayıt ekranı (`AuthView`) ve Profil/Yönetim ekranı (`ProfileAdminView`) üzerinden rol ve durum yönetimi | Hesap pasifleştirme / aktifleştirme (`is_active`). |
 | **Deneyler (`experiments`)** | Oluşturma, arama/filtreleme, başlık/açıklama ve parametre düzenleme | Hem **arşivleme / arşivden çıkarma** (`is_archived`) hem de deney sahibi/admin tarafından transaction içinde **fiziksel silme** desteklenir. Arşivli deneyler salt okunurdur ve yeni çalıştırma başlatılamaz. |
 | **Deney Üyeleri (`experiment_members`)** | Paylaşım penceresinden üye ekleme ve yetki güncelleme | Doğrudan **fiziksel `DELETE`**. |
 | **Çalıştırmalar (`simulation_runs`)** | Simülasyon çalıştırma, deney bazlı sıralı `run_number`, ad (`name`) ve not (`notes`) düzenleme | Tekil çalıştırma **fiziksel `DELETE`** (bağlı snapshot, örnek, metrik ve durum geçmişi `ON DELETE CASCADE` ile temizlenir). |
@@ -166,7 +166,7 @@ Tüm modeller `PhysicsModel` arayüzünü uygular ve `SimulationEngine` üzerind
     - Metrikler: `flight_time`, `range`, `max_height`, `impact_speed`, `max_speed`
 
 ### 5.3. Karşılaştırma ve Dışa Aktarma Kuralları
-- **Karşılaştırma (`RunComparisonDialog`):** Aynı deneye ait `COMPLETED` durumundaki çalıştırmaların zaman serileri aynı grafikte üst üste çizilir, özet metrikleri yan yana karşılaştırılır.
+- **Karşılaştırma (`ComparisonView`):** Aynı deneye ait `COMPLETED` durumundaki iki çalıştırmanın zaman serileri aynı grafikte üst üste çizilir, özet metrikleri ve farkları (`B - A`) yan yana karşılaştırılır.
 - **CSV Dışa Aktarma (`CsvExportService`):** Seçili çalıştırmanın özet metrikleri ve zaman serisi örnekleri UTF-8 CSV dosyası olarak dışa aktarılabilir.
 
 ---
@@ -176,25 +176,28 @@ Tüm modeller `PhysicsModel` arayüzünü uygular ve `SimulationEngine` üzerind
 ### 6.1. Programatik JavaFX Ekranları, Bileşenler ve Diyaloglar (`ui/`)
 | Sınıf | Sorumluluk |
 | :--- | :--- |
-| `MainApp` | Uygulama giriş noktası, pencere ikonu (`logo-icon.png`), özel font yükleme (`Inter`, `JetBrains Mono`), AtlantaFX + `motuslab.css` kurulumu, `AuthView` $\leftrightarrow$ `DashboardView` geçişleri |
+| `MainApp` | Uygulama giriş noktası, `StageStyle.UNDECORATED` pencere kurulumu, özel font (`Inter`, `JetBrains Mono`) ve ikon yükleme, `WindowTitleBar` çerçevesi, `AuthView` $\leftrightarrow$ `DashboardView` geçişleri |
 | `UiHelper` | Diyalog ve uyarı pencerelerine ortak CSS/ikon uygulaması, geri bildirim yönetimi ve Ikonli Feather ikon üreticisi |
-| `AuthView` | `logo-full.png` destekli Neo-Glass kart üzerinde kullanıcı girişi ve yeni hesap kaydı |
-| `DashboardView` | `TopBar`, `ExperimentSidebar`, `ExperimentDetailPane` ve `RunResultPane` bileşenlerini servislere ve asenkron `Task` akışına bağlayan koordinatör görünüm |
-| `component/TopBar` | Tam logo (`logo-full.png`), aktif kullanıcı ve rol rozeti, Admin Paneli ve çıkış aksiyonları |
-| `component/ExperimentSidebar` | Simülasyon türü ikonlu deney listesi, canlı arama, sahiplik/tür/arşiv filtreleme ve yeni deney oluşturma |
-| `component/ExperimentDetailPane` | Workspace düzeni: merkezde deney başlığı, aksiyon menüsü ve sonuç alanı; sağda sekmeli inspector paneli (`Parametreler` [Slider + Monospace girdi] ve `Geçmiş`) |
+| `AuthView` | Animasyonlu mimari grid çizgileri, yukarı süzülen `Canvas` parçacıkları, ikonlu alanlar ve şifre göster/gizle desteğiyle giriş ve kayıt ekranı |
+| `DashboardView` | Solda sabit `NavSidebar` ile 5 ana bölüm (`Genel Bakış`, `Deneylerim`, `Karşılaştırma`, `Arşiv`, `Profil/Yönetim`) ve deney çalışma alanı (`ExperimentDetailPane`) arasında geçiş yapan tek pencereli ana kabuk |
+| `component/WindowTitleBar` | Sürüklenebilir özel pencere başlık çubuğu, küçült/büyüt/kapat kontrolleri ve `Screen.getVisualBounds()` tabanlı görev çubuğunu koruyan büyütme mantığı |
+| `component/NavSidebar` | Üstte tam logo (`logo-full.png`), ortada 5 ana navigasyon sekmesi, altta aktif kullanıcı bilgisi ve çıkış aksiyonu |
+| `component/ExperimentDetailPane` | Deney çalışma alanı (Workspace): geri dönüş barı, deney başlığı ve aksiyon menüsü, merkezde `RunResultPane`, sağda sekmeli inspector paneli (`Parametreler` [Slider + Monospace girdi] ve `Geçmiş`) |
+| `view/OverviewView` | Hoş geldin başlığı, özet KPI kartları (toplam/aktif/paylaşılan/arşivlenen deney) ve aktif deneylere hızlı erişim kartları |
+| `view/ExperimentLibraryView` | Kart tabanlı deney kütüphanesi; arama, sahiplik ve simülasyon türü filtreleriyle hem `Deneylerim` hem de `Arşiv` sekmeleri için ortak kullanılır |
+| `view/ComparisonView` | Tam ekran çalıştırma karşılaştırma görünümü: deney ve iki çalıştırma seçimi, üst üste `LineChart` grafikleri ve metrik fark tablosu |
+| `view/ProfileAdminView` | Tüm kullanıcılar için hesap bilgileri kartı; `ADMIN` rolü için ek olarak tam ekran kullanıcı yönetimi tablosu (rol ve aktif/pasif durumu) |
 | `RunResultPane` | Seçili çalıştırmanın KPI metrik kartları, `LineChart` grafikleri, parametre snapshot'ı, durum geçmişi, ad/not düzenleme, silme ve CSV dışa aktarma |
 | `NewExperimentDialog` | Yeni deney oluşturma (başlık, simülasyon türü ve açıklama) |
 | `EditExperimentDialog` | Deney başlığı ve açıklamasını güncelleme |
 | `ShareExperimentDialog` | Deney üyelerini listeleme, ekleme, yetki değiştirme ve kaldırma |
 | `EditRunDialog` | Çalıştırma adı (`name`) ve notlarını (`notes`) düzenleme |
-| `RunComparisonDialog` | Tamamlanmış çalıştırmaların grafik ve metrik karşılaştırması |
-| `AdminPanelDialog` | `ADMIN` kullanıcıları için kullanıcı listesi, rol değiştirme ve aktif/pasif yönetimi |
 
 ### 6.2. Tasarım Sistemi ve Görsel Varlıklar
-- **Stil Merkezi (`css/motuslab.css`):** Tüm marka/yüzey/metin renk değişkenleri (`-ml-*`), Neo-Glass kart katmanları, buton varyantları, `Slider`/`TabPane` stilleri, 8 serilik grafik paleti ve AtlantaFX tema ezmeleri tek dosyada yönetilir; Java sınıflarında inline `setStyle(...)` kullanılmaz.
+- **Stil Merkezi (`css/motuslab.css`):** Tüm marka/yüzey/metin renk değişkenleri (`-ml-*`), kontrollü Neo-Glass yüzeyler, Burgundy (`#7D0140`) ana aksiyon ve Magenta (`#D71061`) aktif vurgu hiyerarşisi, `Slider`/`TabPane` stilleri, 8 serilik grafik paleti ve AtlantaFX tema ezmeleri tek dosyada yönetilir; Java sınıflarında inline `setStyle(...)` kullanılmaz.
 - **Tipografi (`fonts/`):** Arayüz metinleri için `Inter` (`Regular`, `Medium`, `Bold`), sayısal parametreler, metrikler ve zaman damgaları için `JetBrains Mono` (`Regular`, `Bold`) başlangıçta `MainApp` üzerinden yüklenir.
-- **Marka Varlıkları (`images/`):** Pencere ve diyalog ikonlarında `logo-icon.png`, giriş ekranı ve üst çubukta `logo-full.png` kullanılır.
+- **Marka Varlıkları (`images/`):** Pencere, başlık çubuğu ve diyalog ikonlarında `logo-icon.png`, giriş ekranı ve sol navigasyon menüsünde `logo-full.png` kullanılır.
+- **Pencere Yönetimi:** Uygulama `StageStyle.UNDECORATED` ve `WindowTitleBar` ile açılır. Giriş sonrası `DashboardView`, Windows görev çubuğunu kapatmadan (`Screen.getVisualBounds()`) çalışma alanını kaplayacak şekilde açılır.
 
 ### 6.3. Asenkron İşlem Yönetimi (`JavaFX Task`)
 - Simülasyon çalıştırma işlemi `DashboardView` içinde `javafx.concurrent.Task` ve bir `daemon` arka plan iş parçacığı (`motuslab-sim-runner`) üzerinde yürütülür; böylece uzun süren simülasyonlarda arayüz donmaz.
@@ -262,15 +265,18 @@ MotusLab/
 │   │   │   └── ui/
 │   │   │       ├── component/
 │   │   │       │   ├── ExperimentDetailPane.java
-│   │   │       │   ├── ExperimentSidebar.java
-│   │   │       │   └── TopBar.java
-│   │   │       ├── AdminPanelDialog.java
+│   │   │       │   ├── NavSidebar.java
+│   │   │       │   └── WindowTitleBar.java
+│   │   │       ├── view/
+│   │   │       │   ├── ComparisonView.java
+│   │   │       │   ├── ExperimentLibraryView.java
+│   │   │       │   ├── OverviewView.java
+│   │   │       │   └── ProfileAdminView.java
 │   │   │       ├── AuthView.java
 │   │   │       ├── DashboardView.java
 │   │   │       ├── EditExperimentDialog.java
 │   │   │       ├── EditRunDialog.java
 │   │   │       ├── NewExperimentDialog.java
-│   │   │       ├── RunComparisonDialog.java
 │   │   │       ├── RunResultPane.java
 │   │   │       ├── ShareExperimentDialog.java
 │   │   │       └── UiHelper.java
