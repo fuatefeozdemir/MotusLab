@@ -11,8 +11,11 @@ import com.motuslab.service.ExperimentMemberService;
 import com.motuslab.service.ExperimentService;
 import com.motuslab.service.SimulationRunService;
 import com.motuslab.ui.component.ExperimentDetailPane;
-import com.motuslab.ui.component.ExperimentSidebar;
-import com.motuslab.ui.component.TopBar;
+import com.motuslab.ui.component.NavSidebar;
+import com.motuslab.ui.view.ComparisonView;
+import com.motuslab.ui.view.ExperimentLibraryView;
+import com.motuslab.ui.view.OverviewView;
+import com.motuslab.ui.view.ProfileAdminView;
 import javafx.concurrent.Task;
 import javafx.scene.layout.BorderPane;
 
@@ -25,11 +28,19 @@ public class DashboardView extends BorderPane {
     private final SimulationRunService simulationRunService;
     private final ExperimentMemberService memberService;
 
-    private final ExperimentSidebar sidebar;
+    private final NavSidebar navSidebar;
+    private final OverviewView overviewView;
+    private final ExperimentLibraryView experimentsView;
+    private final ExperimentLibraryView archiveView;
+    private final ComparisonView comparisonView;
+    private final ProfileAdminView profileAdminView;
     private final ExperimentDetailPane detailPane;
     private final RunResultPane runResultPane;
 
+    private List<Experiment> cachedExperiments = List.of();
     private Experiment selectedExperiment;
+    private NavSidebar.Section currentSection = NavSidebar.Section.OVERVIEW;
+    private NavSidebar.Section returnSection = NavSidebar.Section.EXPERIMENTS;
 
     public DashboardView(
             User currentUser,
@@ -42,6 +53,32 @@ public class DashboardView extends BorderPane {
         this.simulationRunService = simulationRunService;
         this.memberService = memberService;
 
+        this.navSidebar = new NavSidebar(currentUser, this::navigateTo, onLogout);
+
+        this.overviewView = new OverviewView(
+                currentUser,
+                this::handleNewExperiment,
+                () -> navigateTo(NavSidebar.Section.COMPARISON),
+                this::openExperimentWorkspace
+        );
+
+        this.experimentsView = new ExperimentLibraryView(
+                currentUser,
+                false,
+                this::handleNewExperiment,
+                this::openExperimentWorkspace
+        );
+
+        this.archiveView = new ExperimentLibraryView(
+                currentUser,
+                true,
+                null,
+                this::openExperimentWorkspace
+        );
+
+        this.comparisonView = new ComparisonView(simulationRunService);
+        this.profileAdminView = new ProfileAdminView(currentUser, new AdminService());
+
         this.runResultPane = new RunResultPane(
                 simulationRunService,
                 new CsvExportService(),
@@ -53,19 +90,8 @@ public class DashboardView extends BorderPane {
                 }
         );
 
-        TopBar topBar = new TopBar(
-                currentUser,
-                () -> AdminPanelDialog.show(currentUser, new AdminService()),
-                onLogout
-        );
-
-        this.sidebar = new ExperimentSidebar(
-                currentUser,
-                () -> NewExperimentDialog.show(experimentService).ifPresent(created -> loadExperiments(created.getId())),
-                this::onExperimentSelected
-        );
-
         ExperimentDetailPane.Actions actions = new ExperimentDetailPane.Actions(
+                () -> navigateTo(returnSection),
                 this::handleRunSimulation,
                 this::handleSaveParameters,
                 this::handleEditExperiment,
@@ -77,48 +103,99 @@ public class DashboardView extends BorderPane {
         );
         this.detailPane = new ExperimentDetailPane(runResultPane, actions);
 
-        setTop(topBar);
-        setLeft(sidebar);
-        setCenter(detailPane);
+        setLeft(navSidebar);
 
-        loadExperiments(null);
+        refreshExperiments();
+        navigateTo(NavSidebar.Section.OVERVIEW);
     }
 
-    private void loadExperiments(Integer selectId) {
-        try {
-            List<Experiment> experiments = experimentService.getMyExperiments();
-            sidebar.setExperiments(experiments, selectId);
-            if (experiments.isEmpty()) {
-                selectedExperiment = null;
-                detailPane.renderEmpty();
+    private void navigateTo(NavSidebar.Section section) {
+        this.currentSection = section;
+        navSidebar.setActiveSection(section);
+
+        switch (section) {
+            case OVERVIEW -> {
+                refreshExperiments();
+                setCenter(overviewView);
             }
-        } catch (MotusLabException ex) {
-            UiHelper.showError("Deneyler yüklenemedi", ex.getMessage());
+            case EXPERIMENTS -> {
+                refreshExperiments();
+                setCenter(experimentsView);
+            }
+            case COMPARISON -> {
+                refreshExperiments();
+                comparisonView.setExperiments(cachedExperiments, selectedExperiment);
+                setCenter(comparisonView);
+            }
+            case ARCHIVE -> {
+                refreshExperiments();
+                setCenter(archiveView);
+            }
+            case MANAGEMENT -> {
+                profileAdminView.refresh();
+                setCenter(profileAdminView);
+            }
         }
     }
 
-    private void onExperimentSelected(Experiment experiment) {
-        this.selectedExperiment = experiment;
+    private void openExperimentWorkspace(Experiment experiment) {
         if (experiment == null) {
+            return;
+        }
+        this.returnSection = (currentSection == NavSidebar.Section.ARCHIVE)
+                ? NavSidebar.Section.ARCHIVE
+                : (currentSection == NavSidebar.Section.OVERVIEW
+                ? NavSidebar.Section.OVERVIEW
+                : NavSidebar.Section.EXPERIMENTS);
+
+        this.selectedExperiment = experiment;
+        navSidebar.setActiveSection(experiment.isArchived()
+                ? NavSidebar.Section.ARCHIVE
+                : NavSidebar.Section.EXPERIMENTS);
+
+        renderSelectedExperiment();
+        setCenter(detailPane);
+    }
+
+    private void renderSelectedExperiment() {
+        if (selectedExperiment == null) {
             detailPane.renderEmpty();
             return;
         }
 
         String permission;
         try {
-            permission = memberService.getEffectivePermission(experiment);
+            permission = memberService.getEffectivePermission(selectedExperiment);
         } catch (MotusLabException ex) {
             permission = "VIEW";
         }
 
         try {
-            List<ExperimentParameter> params = experimentService.getExperimentParameters(experiment.getId());
-            detailPane.renderExperiment(experiment, permission, params);
-            loadRuns(experiment.getId(), null);
+            List<ExperimentParameter> params = experimentService.getExperimentParameters(selectedExperiment.getId());
+            detailPane.renderExperiment(selectedExperiment, permission, params);
+            loadRuns(selectedExperiment.getId(), null);
         } catch (MotusLabException ex) {
-            detailPane.renderExperiment(experiment, permission, List.of());
+            detailPane.renderExperiment(selectedExperiment, permission, List.of());
             detailPane.showFeedback(ex.getMessage(), true);
         }
+    }
+
+    private void refreshExperiments() {
+        try {
+            cachedExperiments = experimentService.getMyExperiments();
+            overviewView.setExperiments(cachedExperiments);
+            experimentsView.setExperiments(cachedExperiments);
+            archiveView.setExperiments(cachedExperiments);
+        } catch (MotusLabException ex) {
+            UiHelper.showError("Deneyler yüklenemedi", ex.getMessage());
+        }
+    }
+
+    private void handleNewExperiment() {
+        NewExperimentDialog.show(experimentService).ifPresent(created -> {
+            refreshExperiments();
+            openExperimentWorkspace(created);
+        });
     }
 
     private void loadRuns(int experimentId, Integer selectRunId) {
@@ -202,8 +279,16 @@ public class DashboardView extends BorderPane {
 
     private void handleEditExperiment() {
         if (selectedExperiment != null && EditExperimentDialog.show(selectedExperiment, experimentService)) {
-            loadExperiments(selectedExperiment.getId());
-            detailPane.showFeedback("Deney bilgileri güncellendi.", false);
+            int expId = selectedExperiment.getId();
+            refreshExperiments();
+            cachedExperiments.stream()
+                    .filter(e -> e.getId() == expId)
+                    .findFirst()
+                    .ifPresent(updated -> {
+                        selectedExperiment = updated;
+                        renderSelectedExperiment();
+                        detailPane.showFeedback("Deney bilgileri güncellendi.", false);
+                    });
         }
     }
 
@@ -220,12 +305,15 @@ public class DashboardView extends BorderPane {
         try {
             int expId = selectedExperiment.getId();
             experimentService.setExperimentArchived(expId, archive);
-            if (archive && !sidebar.isShowArchivedSelected()) {
-                loadExperiments(null);
-            } else {
-                loadExperiments(expId);
-            }
-            detailPane.showFeedback(archive ? "Deney arşivlendi." : "Deney arşivden çıkarıldı.", false);
+            refreshExperiments();
+            cachedExperiments.stream()
+                    .filter(e -> e.getId() == expId)
+                    .findFirst()
+                    .ifPresent(updated -> {
+                        selectedExperiment = updated;
+                        renderSelectedExperiment();
+                        detailPane.showFeedback(archive ? "Deney arşivlendi." : "Deney arşivden çıkarıldı.", false);
+                    });
         } catch (MotusLabException ex) {
             detailPane.showFeedback(ex.getMessage(), true);
         }
@@ -243,7 +331,8 @@ public class DashboardView extends BorderPane {
         if (confirmed) {
             try {
                 experimentService.deleteExperiment(selectedExperiment.getId());
-                loadExperiments(null);
+                selectedExperiment = null;
+                navigateTo(returnSection);
             } catch (MotusLabException ex) {
                 detailPane.showFeedback(ex.getMessage(), true);
             }
@@ -254,15 +343,7 @@ public class DashboardView extends BorderPane {
         if (selectedExperiment == null) {
             return;
         }
-        List<SimulationRun> completed = detailPane.getRuns().stream()
-                .filter(r -> "COMPLETED".equals(r.getStatus()))
-                .toList();
-
-        if (completed.size() < 2) {
-            detailPane.showFeedback("Karşılaştırma için en az 2 tamamlanmış çalıştırma gerekir.", true);
-            return;
-        }
-        RunComparisonDialog.show(selectedExperiment, completed, simulationRunService);
+        navigateTo(NavSidebar.Section.COMPARISON);
     }
 
     private void showFeedback(String message, boolean isError) {

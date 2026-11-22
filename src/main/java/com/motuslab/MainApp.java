@@ -8,12 +8,15 @@ import com.motuslab.service.ExperimentService;
 import com.motuslab.service.SimulationRunService;
 import com.motuslab.ui.AuthView;
 import com.motuslab.ui.DashboardView;
+import com.motuslab.ui.component.WindowTitleBar;
 import javafx.application.Application;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.image.Image;
+import javafx.scene.layout.BorderPane;
 import javafx.scene.text.Font;
 import javafx.stage.Stage;
+import javafx.stage.StageStyle;
 
 import java.io.InputStream;
 import java.util.Objects;
@@ -41,6 +44,7 @@ public class MainApp extends Application {
         this.primaryStage = stage;
         Application.setUserAgentStylesheet(new PrimerLight().getUserAgentStylesheet());
 
+        primaryStage.initStyle(StageStyle.UNDECORATED);
         primaryStage.setTitle("MotusLab");
         loadAppIcon();
         loadFonts();
@@ -71,10 +75,11 @@ public class MainApp extends Application {
     }
 
     private void showAuthView() {
+        WindowTitleBar.resetMaximizeState(primaryStage);
         AuthView authView = new AuthView(authService, this::showDashboard);
-        primaryStage.setMinWidth(440);
-        primaryStage.setMinHeight(520);
-        primaryStage.setScene(createScene(authView, 480, 560));
+        primaryStage.setMinWidth(680);
+        primaryStage.setMinHeight(580);
+        primaryStage.setScene(createScene(authView, 920, 660));
         primaryStage.centerOnScreen();
     }
 
@@ -91,12 +96,17 @@ public class MainApp extends Application {
         );
         primaryStage.setMinWidth(1040);
         primaryStage.setMinHeight(660);
-        primaryStage.setScene(createScene(dashboardView, 1280, 800));
-        primaryStage.centerOnScreen();
+        WindowTitleBar.maximizeToVisualBounds(primaryStage);
+        primaryStage.setScene(createScene(dashboardView, primaryStage.getWidth(), primaryStage.getHeight()));
     }
 
-    private Scene createScene(Parent root, double width, double height) {
-        Scene scene = new Scene(root, width, height);
+    private Scene createScene(Parent content, double width, double height) {
+        BorderPane frame = new BorderPane();
+        frame.getStyleClass().add("ml-window-frame");
+        frame.setTop(new WindowTitleBar(primaryStage, "MotusLab"));
+        frame.setCenter(content);
+
+        Scene scene = new Scene(frame, width, height);
         String css = Objects.requireNonNull(
                 getClass().getResource(APP_STYLESHEET),
                 "Stylesheet bulunamadı: " + APP_STYLESHEET

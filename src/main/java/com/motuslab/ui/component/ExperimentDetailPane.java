@@ -38,6 +38,7 @@ import java.util.function.Consumer;
 public class ExperimentDetailPane extends BorderPane {
 
     public record Actions(
+            Runnable onBack,
             Consumer<Boolean> onRunSimulation,
             Runnable onSaveParameters,
             Runnable onEditExperiment,
@@ -139,6 +140,12 @@ public class ExperimentDetailPane extends BorderPane {
         boolean canEdit = (isOwner || "EDIT".equals(permission)) && !isArchived;
         boolean canRun = (canEdit || "RUN".equals(permission)) && !isArchived;
 
+        // --- Geri Dönüş Barı ---
+        Button backButton = new Button("Geri Dön", UiHelper.icon(Feather.ARROW_LEFT, 15));
+        backButton.getStyleClass().add("ml-back-btn");
+        backButton.setGraphicTextGap(6);
+        backButton.setOnAction(e -> actions.onBack().run());
+
         // --- Merkez Üst Başlık ve Aksiyon Barı ---
         Label titleLabel = new Label(experiment.getTitle());
         titleLabel.getStyleClass().add("ml-page-title");
@@ -195,7 +202,7 @@ public class ExperimentDetailPane extends BorderPane {
         HBox headerBar = new HBox(16, titleBlock, headerSpacer, actionBox);
         headerBar.setAlignment(Pos.TOP_LEFT);
 
-        VBox centerContent = new VBox(16, headerBar, feedbackLabel, runResultPane);
+        VBox centerContent = new VBox(14, backButton, headerBar, feedbackLabel, runResultPane);
         centerContent.getStyleClass().add("ml-detail-pane");
 
         ScrollPane centerScroll = new ScrollPane(centerContent);
