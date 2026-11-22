@@ -16,8 +16,11 @@ import com.motuslab.ui.view.ComparisonView;
 import com.motuslab.ui.view.ExperimentLibraryView;
 import com.motuslab.ui.view.OverviewView;
 import com.motuslab.ui.view.ProfileAdminView;
+import javafx.animation.FadeTransition;
 import javafx.concurrent.Task;
+import javafx.scene.Node;
 import javafx.scene.layout.BorderPane;
+import javafx.util.Duration;
 
 import java.util.List;
 import java.util.Map;
@@ -109,6 +112,18 @@ public class DashboardView extends BorderPane {
         navigateTo(NavSidebar.Section.OVERVIEW);
     }
 
+    private void switchCenter(Node view) {
+        if (getCenter() == view) {
+            return;
+        }
+        view.setOpacity(0);
+        setCenter(view);
+        FadeTransition ft = new FadeTransition(Duration.millis(140), view);
+        ft.setFromValue(0);
+        ft.setToValue(1);
+        ft.play();
+    }
+
     private void navigateTo(NavSidebar.Section section) {
         this.currentSection = section;
         navSidebar.setActiveSection(section);
@@ -116,24 +131,24 @@ public class DashboardView extends BorderPane {
         switch (section) {
             case OVERVIEW -> {
                 refreshExperiments();
-                setCenter(overviewView);
+                switchCenter(overviewView);
             }
             case EXPERIMENTS -> {
                 refreshExperiments();
-                setCenter(experimentsView);
+                switchCenter(experimentsView);
             }
             case COMPARISON -> {
                 refreshExperiments();
                 comparisonView.setExperiments(cachedExperiments, selectedExperiment);
-                setCenter(comparisonView);
+                switchCenter(comparisonView);
             }
             case ARCHIVE -> {
                 refreshExperiments();
-                setCenter(archiveView);
+                switchCenter(archiveView);
             }
             case MANAGEMENT -> {
                 profileAdminView.refresh();
-                setCenter(profileAdminView);
+                switchCenter(profileAdminView);
             }
         }
     }
@@ -154,7 +169,7 @@ public class DashboardView extends BorderPane {
                 : NavSidebar.Section.EXPERIMENTS);
 
         renderSelectedExperiment();
-        setCenter(detailPane);
+        switchCenter(detailPane);
     }
 
     private void renderSelectedExperiment() {
@@ -267,6 +282,7 @@ public class DashboardView extends BorderPane {
         try {
             Map<Integer, Double> values = detailPane.readParameterValues();
             experimentService.updateExperimentParameters(selectedExperiment.getId(), values);
+            detailPane.markParametersSaved();
             return true;
         } catch (NumberFormatException ex) {
             detailPane.showFeedback("Tüm parametreler geçerli bir sayı olmalıdır.", true);

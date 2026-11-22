@@ -8,7 +8,9 @@ import com.motuslab.model.SimulationRun;
 import com.motuslab.service.SimulationRunService;
 import com.motuslab.ui.UiHelper;
 import javafx.collections.FXCollections;
+import javafx.geometry.Point2D;
 import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.chart.LineChart;
 import javafx.scene.chart.NumberAxis;
 import javafx.scene.chart.XYChart;
@@ -17,9 +19,12 @@ import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.control.Tooltip;
+import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import org.kordamp.ikonli.feather.Feather;
 
@@ -42,7 +47,7 @@ public class ComparisonView extends ScrollPane {
     private final ComboBox<SimulationRun> runABox = createRunComboBox();
     private final ComboBox<SimulationRun> runBBox = createRunComboBox();
     private final Label feedbackLabel = new Label();
-    private final VBox resultBox = new VBox(16);
+    private final VBox resultBox = new VBox(18);
 
     public ComparisonView(SimulationRunService simulationRunService) {
         this.simulationRunService = simulationRunService;
@@ -50,37 +55,53 @@ public class ComparisonView extends ScrollPane {
         setFitToWidth(true);
         getStyleClass().add("ml-scroll-pane");
 
-        Label title = new Label("Çalıştırma Karşılaştırma");
+        // --- Başlık ---
+        Label title = new Label("Karşılaştırma");
         title.getStyleClass().add("ml-page-title");
 
-        Label subtitle = new Label("Aynı deneye ait iki tamamlanmış çalıştırmanın grafik ve metriklerini yan yana analiz edin.");
+        Label subtitle = new Label("Aynı deneye ait iki tamamlanmış çalıştırmanın yörünge, hız ve metrik farklarını inceleyin.");
         subtitle.getStyleClass().add("ml-text-secondary");
 
-        experimentBox.setPrefWidth(250);
+        // --- 1. Üst Seçim Alanı (Deney + Yan Yana Run A / Run B) ---
+        experimentBox.setMaxWidth(Double.MAX_VALUE);
         experimentBox.setCellFactory(lv -> createExperimentCell());
         experimentBox.setButtonCell(createExperimentCell());
         experimentBox.valueProperty().addListener((obs, o, n) -> loadRunsForExperiment(n));
+
+        VBox expGroup = new VBox(5, metaLabel("DENEY"), experimentBox);
+        HBox.setHgrow(expGroup, Priority.ALWAYS);
+
+        Region dotA = new Region();
+        dotA.getStyleClass().add("ml-series-dot-a");
+        HBox labelA = new HBox(6, dotA, metaLabel("RUN A (REFERANS)"));
+        labelA.setAlignment(Pos.CENTER_LEFT);
+        runABox.setMaxWidth(Double.MAX_VALUE);
+        VBox runAGroup = new VBox(5, labelA, runABox);
+        HBox.setHgrow(runAGroup, Priority.ALWAYS);
+
+        Region dotB = new Region();
+        dotB.getStyleClass().add("ml-series-dot-b");
+        HBox labelB = new HBox(6, dotB, metaLabel("RUN B (KARŞILAŞTIRILAN)"));
+        labelB.setAlignment(Pos.CENTER_LEFT);
+        runBBox.setMaxWidth(Double.MAX_VALUE);
+        VBox runBGroup = new VBox(5, labelB, runBBox);
+        HBox.setHgrow(runBGroup, Priority.ALWAYS);
 
         Button compareBtn = new Button("Karşılaştır", UiHelper.icon(Feather.GIT_MERGE, 14, "ml-icon-light"));
         compareBtn.getStyleClass().add("ml-btn-primary");
         compareBtn.setGraphicTextGap(6);
         compareBtn.setOnAction(e -> doCompare());
 
-        HBox selectorBar = new HBox(10,
-                new Label("Deney:"), experimentBox,
-                new Label("Run A:"), runABox,
-                new Label("Run B:"), runBBox,
-                compareBtn
-        );
-        selectorBar.setAlignment(Pos.CENTER_LEFT);
-
-        VBox selectorCard = new VBox(10, selectorBar, feedbackLabel);
-        selectorCard.getStyleClass().add("ml-card");
+        HBox selectorRow = new HBox(14, expGroup, runAGroup, runBGroup, compareBtn);
+        selectorRow.setAlignment(Pos.BOTTOM_LEFT);
 
         feedbackLabel.setWrapText(true);
         UiHelper.clearFeedback(feedbackLabel);
 
-        VBox content = new VBox(18, new VBox(4, title, subtitle), selectorCard, resultBox);
+        VBox selectorCard = new VBox(10, selectorRow, feedbackLabel);
+        selectorCard.getStyleClass().add("ml-card");
+
+        VBox content = new VBox(20, new VBox(4, title, subtitle), selectorCard, resultBox);
         content.getStyleClass().add("ml-detail-pane");
         setContent(content);
     }
@@ -153,52 +174,247 @@ public class ComparisonView extends ScrollPane {
             String labelA = runA.getDisplayName();
             String labelB = runB.getDisplayName();
 
-            GridPane metricsGrid = buildMetricsGrid(labelA, labelB, metricsA, metricsB);
+            // 2. Nötr Metrik Farkları Şeridi
+            FlowPane diffStrip = buildDiffCards(metricsA, metricsB);
 
+            // 3. Geniş Karşılaştırma Grafikleri
             boolean is2D = "PROJECTILE_2D".equals(exp.getSimulationTypeCode());
-            HBox chartsBox = new HBox(16);
+            VBox chartsBox = new VBox(16);
             if (is2D) {
-                LineChart<Number, Number> trajectory = buildOverlayChart(
-                        "Yörünge (y - x)", "Konum x (m)", "Yükseklik y (m)",
+                VBox trajectory = buildOverlayChartCard(
+                        "Yörünge Karşılaştırması (y - x)",
+                        labelA + " ve " + labelB + " yatay menzil - yükseklik profilleri",
+                        "Konum x (m)", "Yükseklik y (m)", "m", "m",
                         labelA, samplesA, labelB, samplesB,
-                        RunSample::getPositionX, s -> s.getPositionY() != null ? s.getPositionY() : 0.0
+                        RunSample::getPositionX, s -> s.getPositionY() != null ? s.getPositionY() : 0.0,
+                        360
                 );
-                LineChart<Number, Number> speed = buildOverlayChart(
-                        "Hız Büyüklüğü - Zaman", "Zaman (s)", "Hız (m/s)",
+                VBox speed = buildOverlayChartCard(
+                        "Hız Büyüklüğü - Zaman",
+                        "İki çalıştırmanın zamana bağlı anlık hız karşılaştırması",
+                        "Zaman (s)", "Hız (m/s)", "s", "m/s",
                         labelA, samplesA, labelB, samplesB,
-                        RunSample::getTimeSeconds, s -> Math.hypot(s.getVelocityX(), s.getVelocityY() != null ? s.getVelocityY() : 0.0)
+                        RunSample::getTimeSeconds, s -> Math.hypot(s.getVelocityX(), s.getVelocityY() != null ? s.getVelocityY() : 0.0),
+                        280
                 );
-                HBox.setHgrow(trajectory, Priority.ALWAYS);
-                HBox.setHgrow(speed, Priority.ALWAYS);
                 chartsBox.getChildren().addAll(trajectory, speed);
             } else {
-                LineChart<Number, Number> pos = buildOverlayChart(
-                        "Konum - Zaman", "Zaman (s)", "Konum x (m)",
+                VBox pos = buildOverlayChartCard(
+                        "Konum - Zaman Karşılaştırması",
+                        labelA + " ve " + labelB + " konum eğrileri",
+                        "Zaman (s)", "Konum x (m)", "s", "m",
                         labelA, samplesA, labelB, samplesB,
-                        RunSample::getTimeSeconds, RunSample::getPositionX
+                        RunSample::getTimeSeconds, RunSample::getPositionX,
+                        320
                 );
-                LineChart<Number, Number> vel = buildOverlayChart(
-                        "Hız - Zaman", "Zaman (s)", "Hız vx (m/s)",
+                VBox vel = buildOverlayChartCard(
+                        "Hız - Zaman Karşılaştırması",
+                        "İki çalıştırmanın zamana bağlı hız profilleri",
+                        "Zaman (s)", "Hız vx (m/s)", "s", "m/s",
                         labelA, samplesA, labelB, samplesB,
-                        RunSample::getTimeSeconds, RunSample::getVelocityX
+                        RunSample::getTimeSeconds, RunSample::getVelocityX,
+                        280
                 );
-                HBox.setHgrow(pos, Priority.ALWAYS);
-                HBox.setHgrow(vel, Priority.ALWAYS);
                 chartsBox.getChildren().addAll(pos, vel);
             }
 
-            Label tableTitle = new Label("Metrik Karşılaştırması");
+            // 4. Detaylı Metrik Tablosu
+            Label tableTitle = new Label("Detaylı Metrik Tablosu");
             tableTitle.getStyleClass().add("ml-section-title");
+            GridPane metricsGrid = buildMetricsGrid(labelA, labelB, metricsA, metricsB);
 
-            resultBox.getChildren().addAll(chartsBox, tableTitle, metricsGrid);
+            resultBox.getChildren().addAll(diffStrip, chartsBox, new VBox(8, tableTitle, metricsGrid));
         } catch (MotusLabException ex) {
             UiHelper.setFeedback(feedbackLabel, ex.getMessage(), true);
         }
     }
 
+    private static FlowPane buildDiffCards(List<RunMetric> metricsA, List<RunMetric> metricsB) {
+        Map<String, RunMetric> mapB = new LinkedHashMap<>();
+        for (RunMetric m : metricsB) mapB.put(m.getMetricCode(), m);
+
+        FlowPane pane = new FlowPane(12, 12);
+        for (RunMetric mA : metricsA) {
+            RunMetric mB = mapB.get(mA.getMetricCode());
+            if (mB == null) continue;
+
+            double delta = mB.getMetricValue() - mA.getMetricValue();
+            String diffText = String.format(Locale.US, "%+.3f %s", delta, mA.getUnit());
+
+            Label nameLbl = new Label(formatMetricName(mA.getMetricCode()).toUpperCase(Locale.of("tr", "TR")));
+            nameLbl.getStyleClass().add("ml-card-meta-label");
+
+            Label diffVal = new Label(diffText);
+            diffVal.getStyleClass().add("ml-metric-value");
+
+            Label pairLbl = new Label(String.format(Locale.US, "%.2f → %.2f %s",
+                    mA.getMetricValue(), mB.getMetricValue(), mA.getUnit()));
+            pairLbl.getStyleClass().addAll("ml-mono", "ml-text-muted");
+
+            VBox card = new VBox(4, nameLbl, diffVal, pairLbl);
+            card.getStyleClass().add("ml-metric-card");
+            card.setMinWidth(165);
+            pane.getChildren().add(card);
+        }
+        return pane;
+    }
+
+    private static VBox buildOverlayChartCard(
+            String title, String subtitle,
+            String xLabel, String yLabel,
+            String xUnit, String yUnit,
+            String nameA, List<RunSample> samplesA,
+            String nameB, List<RunSample> samplesB,
+            ToDoubleFunction<RunSample> xMapper, ToDoubleFunction<RunSample> yMapper,
+            double height
+    ) {
+        NumberAxis xAxis = new NumberAxis();
+        xAxis.setLabel(xLabel);
+        xAxis.setForceZeroInRange(false);
+
+        NumberAxis yAxis = new NumberAxis();
+        yAxis.setLabel(yLabel);
+        yAxis.setForceZeroInRange(false);
+
+        LineChart<Number, Number> chart = new LineChart<>(xAxis, yAxis);
+        chart.setLegendVisible(true);
+        chart.setCreateSymbols(false);
+        chart.setAnimated(false);
+        chart.setPrefHeight(height);
+
+        XYChart.Series<Number, Number> seriesA = new XYChart.Series<>();
+        seriesA.setName(nameA);
+        for (RunSample s : samplesA) {
+            seriesA.getData().add(new XYChart.Data<>(xMapper.applyAsDouble(s), yMapper.applyAsDouble(s)));
+        }
+
+        XYChart.Series<Number, Number> seriesB = new XYChart.Series<>();
+        seriesB.setName(nameB);
+        for (RunSample s : samplesB) {
+            seriesB.getData().add(new XYChart.Data<>(xMapper.applyAsDouble(s), yMapper.applyAsDouble(s)));
+        }
+        chart.getData().addAll(seriesA, seriesB);
+
+        Label titleLbl = new Label(title);
+        titleLbl.getStyleClass().add("ml-section-title");
+        Label subLbl = new Label(subtitle);
+        subLbl.getStyleClass().add("ml-text-muted");
+        VBox titleBox = new VBox(2, titleLbl, subLbl);
+
+        Label coordLabel = new Label("—");
+        coordLabel.getStyleClass().add("ml-coord-readout");
+
+        Button zoomInBtn = new Button("", UiHelper.icon(Feather.ZOOM_IN, 13));
+        zoomInBtn.getStyleClass().add("ml-icon-btn");
+        zoomInBtn.setTooltip(new Tooltip("Yakınlaştır"));
+        zoomInBtn.setOnAction(e -> zoomAxes(xAxis, yAxis, 0.75));
+
+        Button zoomOutBtn = new Button("", UiHelper.icon(Feather.ZOOM_OUT, 13));
+        zoomOutBtn.getStyleClass().add("ml-icon-btn");
+        zoomOutBtn.setTooltip(new Tooltip("Uzaklaştır"));
+        zoomOutBtn.setOnAction(e -> zoomAxes(xAxis, yAxis, 1.33));
+
+        Button resetBtn = new Button("", UiHelper.icon(Feather.ROTATE_CCW, 13));
+        resetBtn.getStyleClass().add("ml-icon-btn");
+        resetBtn.setTooltip(new Tooltip("Görünümü Sıfırla"));
+        resetBtn.setOnAction(e -> {
+            xAxis.setAutoRanging(true);
+            yAxis.setAutoRanging(true);
+        });
+
+        Region sp = new Region();
+        HBox.setHgrow(sp, Priority.ALWAYS);
+
+        HBox header = new HBox(8, titleBox, sp, coordLabel, zoomInBtn, zoomOutBtn, resetBtn);
+        header.setAlignment(Pos.CENTER_LEFT);
+
+        chart.setOnMouseMoved(e -> {
+            Node plot = chart.lookup(".chart-plot-background");
+            if (plot == null) return;
+            Point2D p = plot.sceneToLocal(e.getSceneX(), e.getSceneY());
+            if (p.getX() >= 0 && p.getY() >= 0 && p.getX() <= plot.getBoundsInLocal().getWidth()
+                    && p.getY() <= plot.getBoundsInLocal().getHeight()) {
+                Number xVal = xAxis.getValueForDisplay(p.getX());
+                Number yVal = yAxis.getValueForDisplay(p.getY());
+                if (xVal != null && yVal != null) {
+                    coordLabel.setText(String.format(Locale.US, "%.2f %s, %.2f %s",
+                            xVal.doubleValue(), xUnit, yVal.doubleValue(), yUnit));
+                }
+            }
+        });
+        chart.setOnMouseExited(e -> coordLabel.setText("—"));
+
+        VBox card = new VBox(8, header, chart);
+        card.getStyleClass().add("ml-chart-card");
+        return card;
+    }
+
+    private static void zoomAxes(NumberAxis xAxis, NumberAxis yAxis, double factor) {
+        zoomAxis(xAxis, factor);
+        zoomAxis(yAxis, factor);
+    }
+
+    private static void zoomAxis(NumberAxis axis, double factor) {
+        double lower = axis.getLowerBound();
+        double upper = axis.getUpperBound();
+        double range = upper - lower;
+        if (range <= 0) return;
+
+        double center = (lower + upper) / 2.0;
+        double half = (range * factor) / 2.0;
+
+        axis.setAutoRanging(false);
+        axis.setLowerBound(center - half);
+        axis.setUpperBound(center + half);
+        axis.setTickUnit(Math.max(1e-6, (half * 2.0) / 6.0));
+    }
+
+    private static GridPane buildMetricsGrid(String labelA, String labelB, List<RunMetric> metricsA, List<RunMetric> metricsB) {
+        Map<String, RunMetric> mapA = new LinkedHashMap<>();
+        for (RunMetric m : metricsA) mapA.put(m.getMetricCode(), m);
+        Map<String, RunMetric> mapB = new LinkedHashMap<>();
+        for (RunMetric m : metricsB) mapB.put(m.getMetricCode(), m);
+
+        GridPane grid = new GridPane();
+        grid.setHgap(32);
+        grid.setVgap(10);
+        grid.getStyleClass().add("ml-card");
+
+        Label hMetric = metaLabel("METRİK");
+        Label hA = metaLabel(labelA.toUpperCase(Locale.ROOT));
+        Label hB = metaLabel(labelB.toUpperCase(Locale.ROOT));
+        Label hDiff = metaLabel("FARK (B - A)");
+        grid.addRow(0, hMetric, hA, hB, hDiff);
+
+        int row = 1;
+        for (String code : mapA.keySet()) {
+            RunMetric mA = mapA.get(code);
+            RunMetric mB = mapB.get(code);
+            String unit = mA.getUnit();
+
+            Label nameLbl = new Label(formatMetricName(code));
+            nameLbl.getStyleClass().add("ml-text-bold");
+
+            Label valA = new Label(String.format(Locale.US, "%.3f %s", mA.getMetricValue(), unit));
+            Label valB = new Label(mB != null ? String.format(Locale.US, "%.3f %s", mB.getMetricValue(), unit) : "-");
+            Label diff = new Label(mB != null ? String.format(Locale.US, "%+.3f %s", mB.getMetricValue() - mA.getMetricValue(), unit) : "-");
+            valA.getStyleClass().add("ml-mono");
+            valB.getStyleClass().add("ml-mono");
+            diff.getStyleClass().add("ml-diff-pill");
+
+            grid.addRow(row++, nameLbl, valA, valB, diff);
+        }
+        return grid;
+    }
+
+    private static Label metaLabel(String text) {
+        Label l = new Label(text);
+        l.getStyleClass().add("ml-card-meta-label");
+        return l;
+    }
+
     private static ComboBox<SimulationRun> createRunComboBox() {
         ComboBox<SimulationRun> box = new ComboBox<>();
-        box.setPrefWidth(210);
         box.setCellFactory(lv -> createRunCell());
         box.setButtonCell(createRunCell());
         return box;
@@ -227,79 +443,6 @@ public class ComparisonView extends ScrollPane {
                 }
             }
         };
-    }
-
-    private static GridPane buildMetricsGrid(String labelA, String labelB, List<RunMetric> metricsA, List<RunMetric> metricsB) {
-        Map<String, RunMetric> mapA = new LinkedHashMap<>();
-        for (RunMetric m : metricsA) mapA.put(m.getMetricCode(), m);
-        Map<String, RunMetric> mapB = new LinkedHashMap<>();
-        for (RunMetric m : metricsB) mapB.put(m.getMetricCode(), m);
-
-        GridPane grid = new GridPane();
-        grid.setHgap(28);
-        grid.setVgap(10);
-        grid.getStyleClass().add("ml-card");
-
-        Label hMetric = new Label("Metrik");
-        Label hA = new Label(labelA);
-        Label hB = new Label(labelB);
-        Label hDiff = new Label("Fark (B - A)");
-        hMetric.getStyleClass().add("ml-text-bold");
-        hA.getStyleClass().add("ml-text-bold");
-        hB.getStyleClass().add("ml-text-bold");
-        hDiff.getStyleClass().add("ml-text-bold");
-        grid.addRow(0, hMetric, hA, hB, hDiff);
-
-        int row = 1;
-        for (String code : mapA.keySet()) {
-            RunMetric mA = mapA.get(code);
-            RunMetric mB = mapB.get(code);
-            String unit = mA.getUnit();
-
-            Label valA = new Label(String.format(Locale.US, "%.3f %s", mA.getMetricValue(), unit));
-            Label valB = new Label(mB != null ? String.format(Locale.US, "%.3f %s", mB.getMetricValue(), unit) : "-");
-            Label diff = new Label(mB != null ? String.format(Locale.US, "%+.3f %s", mB.getMetricValue() - mA.getMetricValue(), unit) : "-");
-            valA.getStyleClass().add("ml-mono");
-            valB.getStyleClass().add("ml-mono");
-            diff.getStyleClass().add("ml-mono");
-
-            grid.addRow(row++, new Label(formatMetricName(code)), valA, valB, diff);
-        }
-        return grid;
-    }
-
-    private static LineChart<Number, Number> buildOverlayChart(
-            String title, String xLabel, String yLabel,
-            String nameA, List<RunSample> samplesA,
-            String nameB, List<RunSample> samplesB,
-            ToDoubleFunction<RunSample> xMapper, ToDoubleFunction<RunSample> yMapper
-    ) {
-        NumberAxis xAxis = new NumberAxis();
-        xAxis.setLabel(xLabel);
-        NumberAxis yAxis = new NumberAxis();
-        yAxis.setLabel(yLabel);
-
-        LineChart<Number, Number> chart = new LineChart<>(xAxis, yAxis);
-        chart.setTitle(title);
-        chart.setLegendVisible(true);
-        chart.setCreateSymbols(false);
-        chart.setAnimated(false);
-        chart.setPrefHeight(340);
-
-        XYChart.Series<Number, Number> seriesA = new XYChart.Series<>();
-        seriesA.setName(nameA);
-        for (RunSample s : samplesA) {
-            seriesA.getData().add(new XYChart.Data<>(xMapper.applyAsDouble(s), yMapper.applyAsDouble(s)));
-        }
-
-        XYChart.Series<Number, Number> seriesB = new XYChart.Series<>();
-        seriesB.setName(nameB);
-        for (RunSample s : samplesB) {
-            seriesB.getData().add(new XYChart.Data<>(xMapper.applyAsDouble(s), yMapper.applyAsDouble(s)));
-        }
-
-        chart.getData().addAll(seriesA, seriesB);
-        return chart;
     }
 
     private static List<RunSample> downsample(List<RunSample> samples, int maxPoints) {

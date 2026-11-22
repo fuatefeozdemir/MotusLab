@@ -15,6 +15,8 @@ public class Experiment {
     private OffsetDateTime createdAt;
     private OffsetDateTime updatedAt;
     private boolean archived;
+    private int runCount;
+    private int lastRunNumber;
 
     public Experiment() {
     }
@@ -105,5 +107,21 @@ public class Experiment {
 
     public void setArchived(boolean archived) {
         this.archived = archived;
+    }
+
+    public int getRunCount() {
+        return runCount;
+    }
+
+    public void setRunCount(int runCount) {
+        this.runCount = runCount;
+    }
+
+    public int getLastRunNumber() {
+        return lastRunNumber;
+    }
+
+    public void setLastRunNumber(int lastRunNumber) {
+        this.lastRunNumber = lastRunNumber;
     }
 }

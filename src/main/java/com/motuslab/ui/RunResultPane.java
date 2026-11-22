@@ -9,14 +9,17 @@ import com.motuslab.model.RunStatusHistory;
 import com.motuslab.model.SimulationRun;
 import com.motuslab.service.CsvExportService;
 import com.motuslab.service.SimulationRunService;
+import javafx.geometry.Point2D;
 import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.chart.LineChart;
 import javafx.scene.chart.NumberAxis;
 import javafx.scene.chart.XYChart;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.TitledPane;
+import javafx.scene.control.Tooltip;
 import javafx.scene.layout.FlowPane;
-import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
@@ -25,6 +28,7 @@ import javafx.stage.FileChooser;
 import org.kordamp.ikonli.feather.Feather;
 
 import java.io.File;
+import java.nio.file.Path;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
@@ -36,291 +40,347 @@ import java.util.function.ToDoubleFunction;
 public class RunResultPane extends VBox {
 
     private static final int MAX_CHART_POINTS = 500;
-    private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss.SSS");
+    private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss");
 
     private final SimulationRunService simulationRunService;
     private final CsvExportService csvExportService;
-    private final BiConsumer<String, Boolean> feedbackCallback;
+    private final BiConsumer<String, Boolean> feedbackHandler;
     private final Consumer<Integer> onRunsChanged;
 
     public RunResultPane(
             SimulationRunService simulationRunService,
             CsvExportService csvExportService,
-            BiConsumer<String, Boolean> feedbackCallback,
+            BiConsumer<String, Boolean> feedbackHandler,
             Consumer<Integer> onRunsChanged
     ) {
-        super(14);
+        super(16);
         this.simulationRunService = simulationRunService;
         this.csvExportService = csvExportService;
-        this.feedbackCallback = feedbackCallback;
+        this.feedbackHandler = feedbackHandler;
         this.onRunsChanged = onRunsChanged;
     }
 
     public void render(Experiment experiment, SimulationRun run) {
         getChildren().clear();
-
-        if (run == null) {
-            Label empty = new Label("Henüz bir çalıştırma kaydı yok.");
+        if (experiment == null || run == null) {
+            Label empty = new Label("Sonuçları incelemek için simülasyonu çalıştırın veya sağdaki Geçmiş sekmesinden bir çalıştırma seçin.");
             empty.getStyleClass().add("ml-text-muted");
             getChildren().add(empty);
             return;
         }
 
-        boolean canManage = experiment != null && simulationRunService.canManageRun(experiment, run);
+        // --- Çalıştırma Üst Şeridi ---
+        Label runTitle = new Label(run.getDisplayName());
+        runTitle.getStyleClass().add("ml-section-title");
 
-        Label titleLabel = new Label(run.getDisplayName());
-        titleLabel.getStyleClass().add("ml-section-title");
+        String timeText = run.getCreatedAt() != null ? run.getCreatedAt().format(DATE_FMT) : "-";
+        Label runMeta = new Label(run.getStatus() + "  ·  " + timeText + "  ·  @" + run.getTriggeredByUsername());
+        runMeta.getStyleClass().addAll("ml-text-muted", "ml-mono");
+
+        VBox titleGroup = new VBox(2, runTitle, runMeta);
 
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
-        HBox headerRow = new HBox(8, titleLabel, spacer);
-        headerRow.setAlignment(Pos.CENTER_LEFT);
-
-        List<RunMetric> metrics = List.of();
-        List<RunSample> samples = List.of();
-        boolean isCompleted = "COMPLETED".equals(run.getStatus());
-
-        if (isCompleted) {
-            try {
-                metrics = simulationRunService.getMetricsByRun(run.getId());
-                samples = simulationRunService.getSamplesByRun(run.getId());
-            } catch (MotusLabException ex) {
-                feedbackCallback.accept(ex.getMessage(), true);
-                return;
+        Button editRunBtn = new Button("", UiHelper.icon(Feather.EDIT_2, 14));
+        editRunBtn.getStyleClass().add("ml-icon-btn");
+        editRunBtn.setTooltip(new Tooltip("Çalıştırma Adını / Notunu Düzenle"));
+        editRunBtn.setOnAction(e -> {
+            if (EditRunDialog.show(run, simulationRunService)) {
+                feedbackHandler.accept("Çalıştırma bilgileri güncellendi.", false);
+                onRunsChanged.accept(run.getId());
             }
+        });
 
-            List<RunMetric> finalMetrics = metrics;
-            List<RunSample> finalSamples = samples;
-            Button exportCsvBtn = new Button("CSV", UiHelper.icon(Feather.DOWNLOAD, 14));
-            exportCsvBtn.getStyleClass().add("ml-btn-secondary");
-            exportCsvBtn.setGraphicTextGap(6);
-            exportCsvBtn.setOnAction(e -> handleExportCsv(experiment, run, finalMetrics, finalSamples));
-            headerRow.getChildren().add(exportCsvBtn);
-        }
+        Button exportCsvBtn = new Button("CSV", UiHelper.icon(Feather.DOWNLOAD, 13));
+        exportCsvBtn.getStyleClass().add("ml-btn-secondary");
+        exportCsvBtn.setGraphicTextGap(5);
+        exportCsvBtn.setDisable(!"COMPLETED".equals(run.getStatus()));
+        exportCsvBtn.setOnAction(e -> handleExportCsv(experiment, run));
 
-        if (canManage) {
-            Button editBtn = new Button("Düzenle", UiHelper.icon(Feather.EDIT_2, 14));
-            editBtn.getStyleClass().add("ml-btn-secondary");
-            editBtn.setGraphicTextGap(6);
-            editBtn.setOnAction(e -> {
-                if (EditRunDialog.show(run, simulationRunService)) {
-                    feedbackCallback.accept("Çalıştırma bilgileri güncellendi.", false);
-                    onRunsChanged.accept(run.getId());
-                }
-            });
+        Button deleteRunBtn = new Button("", UiHelper.icon(Feather.TRASH_2, 14, "ml-icon-danger"));
+        deleteRunBtn.getStyleClass().add("ml-icon-btn");
+        deleteRunBtn.setTooltip(new Tooltip("Çalıştırmayı Sil"));
+        deleteRunBtn.setOnAction(e -> handleDeleteRun(run));
 
-            Button deleteBtn = new Button("Sil", UiHelper.icon(Feather.TRASH_2, 14, "ml-icon-danger"));
-            deleteBtn.getStyleClass().add("ml-btn-danger");
-            deleteBtn.setGraphicTextGap(6);
-            deleteBtn.setOnAction(e -> handleDeleteRun(run));
-
-            headerRow.getChildren().addAll(editBtn, deleteBtn);
-        }
-
-        getChildren().add(headerRow);
+        HBox runHeader = new HBox(8, titleGroup, spacer, editRunBtn, exportCsvBtn, deleteRunBtn);
+        runHeader.setAlignment(Pos.CENTER_LEFT);
+        getChildren().add(runHeader);
 
         if (run.getNotes() != null && !run.getNotes().isBlank()) {
-            Label notesTitle = new Label("Notlar");
-            notesTitle.getStyleClass().add("ml-text-bold");
-            Label notesBody = new Label(run.getNotes());
-            notesBody.getStyleClass().add("ml-text-secondary");
-            notesBody.setWrapText(true);
-
-            VBox notesBox = new VBox(4, notesTitle, notesBody);
-            notesBox.getStyleClass().add("ml-info-box");
-            getChildren().add(notesBox);
+            Label notes = new Label(run.getNotes());
+            notes.getStyleClass().add("ml-text-secondary");
+            notes.setWrapText(true);
+            getChildren().add(notes);
         }
 
         if ("FAILED".equals(run.getStatus())) {
-            Label errLabel = new Label("Çalıştırma başarısız oldu: " +
-                    (run.getErrorMessage() != null ? run.getErrorMessage() : "Bilinmeyen hata"));
-            errLabel.getStyleClass().add("ml-feedback-error");
-            errLabel.setWrapText(true);
-            getChildren().add(errLabel);
-            renderAuditSection(run);
+            Label err = new Label("Hata: " + (run.getErrorMessage() != null ? run.getErrorMessage() : "Bilinmeyen hata"));
+            err.getStyleClass().add("ml-feedback-error");
+            err.setWrapText(true);
+            getChildren().add(err);
             return;
         }
 
-        if (!isCompleted) {
-            Label statusLabel = new Label("Durum: " + run.getStatus());
-            statusLabel.getStyleClass().add("ml-text-muted");
-            getChildren().add(statusLabel);
-            renderAuditSection(run);
-            return;
-        }
-
-        FlowPane metricsPane = new FlowPane(12, 12);
-        for (RunMetric m : metrics) {
-            VBox card = new VBox(4);
-            card.getStyleClass().add("ml-metric-card");
-
-            Label name = new Label(formatMetricName(m.getMetricCode()));
-            name.getStyleClass().add("ml-text-muted");
-
-            Label val = new Label(String.format(Locale.US, "%.3f %s", m.getMetricValue(), m.getUnit()));
-            val.getStyleClass().add("ml-metric-value");
-
-            card.getChildren().addAll(name, val);
-            metricsPane.getChildren().add(card);
-        }
-
-        List<RunSample> sampled = downsample(samples, MAX_CHART_POINTS);
-        boolean is2D = experiment != null && "PROJECTILE_2D".equals(experiment.getSimulationTypeCode());
-
-        HBox chartsBox = new HBox(16);
-        if (is2D) {
-            LineChart<Number, Number> trajectoryChart = buildChart(
-                    "Yörünge (y - x)", "Konum x (m)", "Yükseklik y (m)", sampled,
-                    RunSample::getPositionX, s -> s.getPositionY() != null ? s.getPositionY() : 0.0
-            );
-            LineChart<Number, Number> speedChart = buildChart(
-                    "Hız Büyüklüğü - Zaman", "Zaman (s)", "Hız (m/s)", sampled,
-                    RunSample::getTimeSeconds, s -> Math.hypot(s.getVelocityX(), s.getVelocityY() != null ? s.getVelocityY() : 0.0)
-            );
-            HBox.setHgrow(trajectoryChart, Priority.ALWAYS);
-            HBox.setHgrow(speedChart, Priority.ALWAYS);
-            chartsBox.getChildren().addAll(trajectoryChart, speedChart);
-        } else {
-            LineChart<Number, Number> posChart = buildChart(
-                    "Konum - Zaman", "Zaman (s)", "Konum x (m)", sampled,
-                    RunSample::getTimeSeconds, RunSample::getPositionX
-            );
-            LineChart<Number, Number> velChart = buildChart(
-                    "Hız - Zaman", "Zaman (s)", "Hız vx (m/s)", sampled,
-                    RunSample::getTimeSeconds, RunSample::getVelocityX
-            );
-            HBox.setHgrow(posChart, Priority.ALWAYS);
-            HBox.setHgrow(velChart, Priority.ALWAYS);
-            chartsBox.getChildren().addAll(posChart, velChart);
-        }
-
-        getChildren().addAll(metricsPane, chartsBox);
-        renderAuditSection(run);
-    }
-
-    private void handleDeleteRun(SimulationRun run) {
-        boolean confirmed = UiHelper.showConfirm(
-                "Çalıştırmayı Sil",
-                run.getDisplayName(),
-                "Bu çalıştırma ve tüm sonuç verileri kalıcı olarak silinecek. Emin misiniz?"
-        );
-        if (confirmed) {
-            try {
-                simulationRunService.deleteRun(run.getId());
-                feedbackCallback.accept(run.getDisplayName() + " silindi.", false);
-                onRunsChanged.accept(null);
-            } catch (MotusLabException ex) {
-                feedbackCallback.accept(ex.getMessage(), true);
-            }
-        }
-    }
-
-    private void renderAuditSection(SimulationRun run) {
         try {
+            List<RunMetric> metrics = simulationRunService.getMetricsByRun(run.getId());
+            List<RunSample> allSamples = simulationRunService.getSamplesByRun(run.getId());
             List<RunParameterSnapshot> snapshots = simulationRunService.getSnapshotsByRun(run.getId());
             List<RunStatusHistory> history = simulationRunService.getStatusHistoryByRun(run.getId());
 
-            VBox snapshotBox = new VBox(8);
-            snapshotBox.getStyleClass().add("ml-info-box");
-            Label snapTitle = new Label("Kullanılan Parametreler (Snapshot)");
-            snapTitle.getStyleClass().add("ml-text-bold");
-
-            GridPane snapGrid = new GridPane();
-            snapGrid.setHgap(16);
-            snapGrid.setVgap(6);
-            int sRow = 0;
-            for (RunParameterSnapshot snap : snapshots) {
-                Label name = new Label(snap.getParameterName());
-                name.getStyleClass().add("ml-text-secondary");
-                Label val = new Label(String.format(Locale.US, "%s %s", snap.getValue(), snap.getUnit()));
-                val.getStyleClass().add("ml-mono");
-                snapGrid.addRow(sRow++, name, val);
+            if (!metrics.isEmpty()) {
+                getChildren().add(buildMetricsRow(metrics));
             }
-            snapshotBox.getChildren().addAll(snapTitle, snapGrid);
 
-            VBox historyBox = new VBox(8);
-            historyBox.getStyleClass().add("ml-info-box");
-            Label histTitle = new Label("Durum Geçmişi");
-            histTitle.getStyleClass().add("ml-text-bold");
+            if (!allSamples.isEmpty()) {
+                List<RunSample> chartSamples = downsample(allSamples, MAX_CHART_POINTS);
+                boolean is2D = "PROJECTILE_2D".equals(experiment.getSimulationTypeCode());
 
-            GridPane histGrid = new GridPane();
-            histGrid.setHgap(16);
-            histGrid.setVgap(6);
-            int hRow = 0;
-            for (RunStatusHistory h : history) {
-                String transition = (h.getOldStatus() == null ? "—" : h.getOldStatus()) + " → " + h.getNewStatus();
-                String time = h.getChangedAt() != null ? h.getChangedAt().format(TIME_FMT) : "-";
-                Label transLabel = new Label(transition);
-                Label timeLabel = new Label(time);
-                timeLabel.getStyleClass().addAll("ml-text-muted", "ml-mono");
-                histGrid.addRow(hRow++, transLabel, timeLabel);
+                if (is2D) {
+                    VBox trajectoryCard = buildChartCard(
+                            "Yörünge (y - x)",
+                            "Cismin yatay menzil boyunca yükseklik profili · " + allSamples.size() + " örnek",
+                            "Konum x (m)", "Yükseklik y (m)", "m", "m",
+                            chartSamples,
+                            RunSample::getPositionX,
+                            s -> s.getPositionY() != null ? s.getPositionY() : 0.0,
+                            360
+                    );
+                    VBox speedCard = buildChartCard(
+                            "Hız Büyüklüğü - Zaman",
+                            "Anlık hız vektörü büyüklüğünün zamana göre değişimi",
+                            "Zaman (s)", "Hız (m/s)", "s", "m/s",
+                            chartSamples,
+                            RunSample::getTimeSeconds,
+                            s -> Math.hypot(s.getVelocityX(), s.getVelocityY() != null ? s.getVelocityY() : 0.0),
+                            270
+                    );
+                    getChildren().addAll(trajectoryCard, speedCard);
+                } else {
+                    VBox posCard = buildChartCard(
+                            "Konum - Zaman",
+                            "Cismin x ekseni üzerindeki konum değişimi · " + allSamples.size() + " örnek",
+                            "Zaman (s)", "Konum x (m)", "s", "m",
+                            chartSamples,
+                            RunSample::getTimeSeconds,
+                            RunSample::getPositionX,
+                            310
+                    );
+                    VBox velCard = buildChartCard(
+                            "Hız - Zaman",
+                            "Cismin anlık hızının zamana göre değişimi",
+                            "Zaman (s)", "Hız vx (m/s)", "s", "m/s",
+                            chartSamples,
+                            RunSample::getTimeSeconds,
+                            RunSample::getVelocityX,
+                            270
+                    );
+                    getChildren().addAll(posCard, velCard);
+                }
             }
-            historyBox.getChildren().addAll(histTitle, histGrid);
 
-            HBox.setHgrow(snapshotBox, Priority.ALWAYS);
-            HBox.setHgrow(historyBox, Priority.ALWAYS);
-            HBox auditRow = new HBox(16, snapshotBox, historyBox);
-
-            getChildren().add(auditRow);
+            if (!snapshots.isEmpty()) {
+                getChildren().add(buildSnapshotsPane(snapshots));
+            }
+            if (!history.isEmpty()) {
+                getChildren().add(buildStatusHistoryPane(history));
+            }
         } catch (MotusLabException ex) {
-            feedbackCallback.accept(ex.getMessage(), true);
+            feedbackHandler.accept(ex.getMessage(), true);
         }
     }
 
-    private void handleExportCsv(Experiment experiment, SimulationRun run, List<RunMetric> metrics, List<RunSample> samples) {
-        FileChooser chooser = new FileChooser();
-        chooser.setTitle("Simülasyon Sonuçlarını CSV Olarak Kaydet");
-        int expId = experiment != null ? experiment.getId() : 0;
-        chooser.setInitialFileName("motuslab_exp" + expId + "_run" + run.getRunNumber() + ".csv");
-        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("CSV Dosyaları (*.csv)", "*.csv"));
+    private FlowPane buildMetricsRow(List<RunMetric> metrics) {
+        FlowPane pane = new FlowPane(12, 12);
+        for (RunMetric m : metrics) {
+            Label name = new Label(formatMetricName(m.getMetricCode()));
+            name.getStyleClass().add("ml-text-muted");
 
-        File file = chooser.showSaveDialog(getScene().getWindow());
-        if (file == null) {
-            return;
-        }
+            Label value = new Label(String.format(Locale.US, "%.3f %s", m.getMetricValue(), m.getUnit()));
+            value.getStyleClass().add("ml-metric-value");
 
-        try {
-            String title = experiment != null ? experiment.getTitle() : "Deney";
-            csvExportService.exportRunToCsv(file.toPath(), title, run, metrics, samples);
-            feedbackCallback.accept("CSV kaydedildi: " + file.getName(), false);
-        } catch (MotusLabException ex) {
-            feedbackCallback.accept(ex.getMessage(), true);
+            VBox card = new VBox(4, name, value);
+            card.getStyleClass().add("ml-metric-card");
+            card.setMinWidth(155);
+            pane.getChildren().add(card);
         }
+        return pane;
     }
 
-    private LineChart<Number, Number> buildChart(
-            String title,
-            String xLabel,
-            String yLabel,
+    private VBox buildChartCard(
+            String title, String subtitle,
+            String xLabel, String yLabel,
+            String xUnit, String yUnit,
             List<RunSample> samples,
             ToDoubleFunction<RunSample> xMapper,
-            ToDoubleFunction<RunSample> yMapper
+            ToDoubleFunction<RunSample> yMapper,
+            double chartHeight
     ) {
         NumberAxis xAxis = new NumberAxis();
         xAxis.setLabel(xLabel);
+        xAxis.setForceZeroInRange(false);
+
         NumberAxis yAxis = new NumberAxis();
         yAxis.setLabel(yLabel);
+        yAxis.setForceZeroInRange(false);
 
         LineChart<Number, Number> chart = new LineChart<>(xAxis, yAxis);
-        chart.setTitle(title);
         chart.setLegendVisible(false);
         chart.setCreateSymbols(false);
         chart.setAnimated(false);
-        chart.setPrefHeight(280);
+        chart.setPrefHeight(chartHeight);
 
         XYChart.Series<Number, Number> series = new XYChart.Series<>();
         for (RunSample s : samples) {
             series.getData().add(new XYChart.Data<>(xMapper.applyAsDouble(s), yMapper.applyAsDouble(s)));
         }
         chart.getData().add(series);
-        return chart;
+
+        Label titleLbl = new Label(title);
+        titleLbl.getStyleClass().add("ml-section-title");
+        Label subLbl = new Label(subtitle);
+        subLbl.getStyleClass().add("ml-text-muted");
+        VBox titleBox = new VBox(2, titleLbl, subLbl);
+
+        Label coordLabel = new Label("—");
+        coordLabel.getStyleClass().add("ml-coord-readout");
+
+        Button zoomInBtn = new Button("", UiHelper.icon(Feather.ZOOM_IN, 13));
+        zoomInBtn.getStyleClass().add("ml-icon-btn");
+        zoomInBtn.setTooltip(new Tooltip("Yakınlaştır"));
+        zoomInBtn.setOnAction(e -> zoomAxes(xAxis, yAxis, 0.75));
+
+        Button zoomOutBtn = new Button("", UiHelper.icon(Feather.ZOOM_OUT, 13));
+        zoomOutBtn.getStyleClass().add("ml-icon-btn");
+        zoomOutBtn.setTooltip(new Tooltip("Uzaklaştır"));
+        zoomOutBtn.setOnAction(e -> zoomAxes(xAxis, yAxis, 1.33));
+
+        Button resetBtn = new Button("", UiHelper.icon(Feather.ROTATE_CCW, 13));
+        resetBtn.getStyleClass().add("ml-icon-btn");
+        resetBtn.setTooltip(new Tooltip("Görünümü Sıfırla"));
+        resetBtn.setOnAction(e -> {
+            xAxis.setAutoRanging(true);
+            yAxis.setAutoRanging(true);
+        });
+
+        Region sp = new Region();
+        HBox.setHgrow(sp, Priority.ALWAYS);
+
+        HBox header = new HBox(8, titleBox, sp, coordLabel, zoomInBtn, zoomOutBtn, resetBtn);
+        header.setAlignment(Pos.CENTER_LEFT);
+
+        // Fare ile gezerken canlı koordinat okuması
+        chart.setOnMouseMoved(e -> {
+            Node plot = chart.lookup(".chart-plot-background");
+            if (plot == null) return;
+            Point2D p = plot.sceneToLocal(e.getSceneX(), e.getSceneY());
+            if (p.getX() >= 0 && p.getY() >= 0 && p.getX() <= plot.getBoundsInLocal().getWidth()
+                    && p.getY() <= plot.getBoundsInLocal().getHeight()) {
+                Number xVal = xAxis.getValueForDisplay(p.getX());
+                Number yVal = yAxis.getValueForDisplay(p.getY());
+                if (xVal != null && yVal != null) {
+                    coordLabel.setText(String.format(Locale.US, "%.2f %s, %.2f %s",
+                            xVal.doubleValue(), xUnit, yVal.doubleValue(), yUnit));
+                }
+            }
+        });
+        chart.setOnMouseExited(e -> coordLabel.setText("—"));
+
+        VBox card = new VBox(8, header, chart);
+        card.getStyleClass().add("ml-chart-card");
+        return card;
     }
 
-    private List<RunSample> downsample(List<RunSample> samples, int maxPoints) {
-        if (samples.size() <= maxPoints) {
-            return samples;
+    private static void zoomAxes(NumberAxis xAxis, NumberAxis yAxis, double factor) {
+        zoomAxis(xAxis, factor);
+        zoomAxis(yAxis, factor);
+    }
+
+    private static void zoomAxis(NumberAxis axis, double factor) {
+        double lower = axis.getLowerBound();
+        double upper = axis.getUpperBound();
+        double range = upper - lower;
+        if (range <= 0) return;
+
+        double center = (lower + upper) / 2.0;
+        double half = (range * factor) / 2.0;
+
+        axis.setAutoRanging(false);
+        axis.setLowerBound(center - half);
+        axis.setUpperBound(center + half);
+        axis.setTickUnit(Math.max(1e-6, (half * 2.0) / 6.0));
+    }
+
+    private TitledPane buildSnapshotsPane(List<RunParameterSnapshot> snapshots) {
+        VBox box = new VBox(6);
+        for (RunParameterSnapshot s : snapshots) {
+            String unit = (s.getUnit() != null && !s.getUnit().isBlank()) ? " " + s.getUnit() : "";
+            Label lbl = new Label(s.getParameterName() + ": " + s.getValue() + unit);
+            lbl.getStyleClass().add("ml-mono");
+            box.getChildren().add(lbl);
         }
+        TitledPane pane = new TitledPane("Çalıştırma Parametre Snapshot'ı", box);
+        pane.setExpanded(false);
+        return pane;
+    }
+
+    private TitledPane buildStatusHistoryPane(List<RunStatusHistory> history) {
+        VBox box = new VBox(6);
+        for (RunStatusHistory h : history) {
+            String time = h.getChangedAt() != null ? h.getChangedAt().format(DATE_FMT) : "-";
+            String from = h.getOldStatus() != null ? h.getOldStatus() + " → " : "";
+            Label lbl = new Label(time + "  ·  " + from + h.getNewStatus());
+            lbl.getStyleClass().addAll("ml-mono", "ml-text-secondary");
+            box.getChildren().add(lbl);
+        }
+        TitledPane pane = new TitledPane("Durum Geçmişi", box);
+        pane.setExpanded(false);
+        return pane;
+    }
+
+    private void handleExportCsv(Experiment experiment, SimulationRun run) {
+        FileChooser chooser = new FileChooser();
+        chooser.setTitle("CSV Olarak Dışa Aktar");
+        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("CSV Dosyaları", "*.csv"));
+        chooser.setInitialFileName("motuslab_run_" + run.getRunNumber() + ".csv");
+
+        File file = chooser.showSaveDialog(getScene() != null ? getScene().getWindow() : null);
+        if (file == null) return;
+
+        try {
+            List<RunMetric> metrics = simulationRunService.getMetricsByRun(run.getId());
+            List<RunSample> samples = simulationRunService.getSamplesByRun(run.getId());
+            csvExportService.exportRunToCsv(
+                    file.toPath(),
+                    experiment.getTitle(),
+                    run,
+                    metrics,
+                    samples
+            );            feedbackHandler.accept("CSV dışa aktarıldı: " + file.getName(), false);
+        } catch (MotusLabException ex) {
+            feedbackHandler.accept(ex.getMessage(), true);
+        }
+    }
+
+    private void handleDeleteRun(SimulationRun run) {
+        boolean confirmed = UiHelper.showConfirm(
+                "Çalıştırmayı Sil",
+                run.getDisplayName(),
+                "Bu çalıştırma ve tüm zaman serisi verileri kalıcı olarak silinecek. Emin misiniz?"
+        );
+        if (confirmed) {
+            try {
+                simulationRunService.deleteRun(run.getId());
+                feedbackHandler.accept("Çalıştırma silindi.", false);
+                onRunsChanged.accept(null);
+            } catch (MotusLabException ex) {
+                feedbackHandler.accept(ex.getMessage(), true);
+            }
+        }
+    }
+
+    private static List<RunSample> downsample(List<RunSample> samples, int maxPoints) {
+        if (samples.size() <= maxPoints) return samples;
         List<RunSample> result = new ArrayList<>(maxPoints);
         double step = (double) (samples.size() - 1) / (maxPoints - 1);
         for (int i = 0; i < maxPoints; i++) {
@@ -330,7 +390,7 @@ public class RunResultPane extends VBox {
         return result;
     }
 
-    private String formatMetricName(String code) {
+    private static String formatMetricName(String code) {
         return switch (code) {
             case "total_time" -> "Toplam Süre";
             case "flight_time" -> "Uçuş Süresi";

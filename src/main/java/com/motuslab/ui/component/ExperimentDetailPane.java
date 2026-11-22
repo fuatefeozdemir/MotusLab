@@ -50,13 +50,14 @@ public class ExperimentDetailPane extends BorderPane {
     ) {
     }
 
-    private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss");
+    private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm");
 
     private final RunResultPane runResultPane;
     private final Actions actions;
 
     private final ListView<SimulationRun> runListView = new ListView<>();
     private final Label feedbackLabel = new Label();
+    private final Label unsavedLabel = new Label("● Kaydedilmemiş değişiklikler");
     private final Map<Integer, TextField> parameterInputs = new LinkedHashMap<>();
 
     private Button runSimButton;
@@ -69,6 +70,9 @@ public class ExperimentDetailPane extends BorderPane {
         feedbackLabel.setWrapText(true);
         UiHelper.clearFeedback(feedbackLabel);
 
+        unsavedLabel.getStyleClass().add("ml-unsaved-indicator");
+        setUnsavedVisible(false);
+
         runListView.setCellFactory(lv -> new ListCell<>() {
             @Override
             protected void updateItem(SimulationRun item, boolean empty) {
@@ -79,6 +83,9 @@ public class ExperimentDetailPane extends BorderPane {
                 } else {
                     String time = item.getCreatedAt() != null ? item.getCreatedAt().format(DATE_FMT) : "-";
 
+                    Region dot = new Region();
+                    dot.getStyleClass().addAll("ml-status-dot", statusDotClass(item.getStatus()));
+
                     Label name = new Label(item.getDisplayName());
                     name.getStyleClass().add("ml-text-bold");
 
@@ -86,22 +93,17 @@ public class ExperimentDetailPane extends BorderPane {
                     HBox.setHgrow(sp, Priority.ALWAYS);
 
                     Label status = new Label(item.getStatus());
-                    if ("FAILED".equals(item.getStatus())) {
-                        status.getStyleClass().add("ml-feedback-error");
-                    } else if ("COMPLETED".equals(item.getStatus())) {
-                        status.getStyleClass().add("ml-badge-success");
-                    } else {
-                        status.getStyleClass().add("ml-badge");
-                    }
+                    status.getStyleClass().addAll("ml-text-muted", "ml-mono");
 
-                    HBox topRow = new HBox(6, name, sp, status);
+                    HBox topRow = new HBox(8, dot, name, sp, status);
                     topRow.setAlignment(Pos.CENTER_LEFT);
 
-                    Label sub = new Label(time + " • @" + item.getTriggeredByUsername());
+                    Label sub = new Label(time + " · @" + item.getTriggeredByUsername());
                     sub.getStyleClass().addAll("ml-text-muted", "ml-mono");
+                    sub.setPadding(new Insets(0, 0, 0, 16));
 
                     VBox box = new VBox(3, topRow, sub);
-                    box.setPadding(new Insets(3, 2, 3, 2));
+                    box.setPadding(new Insets(4, 2, 4, 2));
                     setGraphic(box);
                 }
             }
@@ -116,11 +118,12 @@ public class ExperimentDetailPane extends BorderPane {
         runResultPane.getChildren().clear();
         parameterInputs.clear();
         clearFeedback();
+        setUnsavedVisible(false);
         setRight(null);
 
         Label title = new Label("Bir deney seçin");
         title.getStyleClass().add("ml-section-title");
-        Label sub = new Label("Sol menüden mevcut bir deneyi açın veya yeni bir simülasyon oluşturun.");
+        Label sub = new Label("Deney kütüphanesinden mevcut bir deneyi açın veya yeni bir simülasyon oluşturun.");
         sub.getStyleClass().add("ml-text-muted");
 
         VBox emptyBox = new VBox(10, UiHelper.icon(Feather.SLIDERS, 36, "ml-icon-accent"), title, sub);
@@ -132,6 +135,7 @@ public class ExperimentDetailPane extends BorderPane {
         runResultPane.getChildren().clear();
         parameterInputs.clear();
         clearFeedback();
+        setUnsavedVisible(false);
         runSimButton = null;
         runProgress = null;
 
@@ -140,34 +144,39 @@ public class ExperimentDetailPane extends BorderPane {
         boolean canEdit = (isOwner || "EDIT".equals(permission)) && !isArchived;
         boolean canRun = (canEdit || "RUN".equals(permission)) && !isArchived;
 
-        // --- Geri Dönüş Barı ---
-        Button backButton = new Button("Geri Dön", UiHelper.icon(Feather.ARROW_LEFT, 15));
+        // --- Breadcrumb ve Geri Dönüş ---
+        Button backButton = new Button("Geri", UiHelper.icon(Feather.ARROW_LEFT, 14));
         backButton.getStyleClass().add("ml-back-btn");
-        backButton.setGraphicTextGap(6);
+        backButton.setGraphicTextGap(5);
         backButton.setOnAction(e -> actions.onBack().run());
 
-        // --- Merkez Üst Başlık ve Aksiyon Barı ---
+        String sectionName = isArchived ? "ARŞİV" : "DENEYLER";
+        Label breadcrumb = new Label(sectionName + "  /  " + experiment.getTitle().toUpperCase(Locale.ROOT));
+        breadcrumb.getStyleClass().add("ml-breadcrumb");
+
+        HBox navRow = new HBox(10, backButton, breadcrumb);
+        navRow.setAlignment(Pos.CENTER_LEFT);
+
+        // --- Başlık ve Aksiyon Barı ---
         Label titleLabel = new Label(experiment.getTitle());
         titleLabel.getStyleClass().add("ml-page-title");
 
         HBox titleRow = new HBox(10, titleLabel);
         titleRow.setAlignment(Pos.CENTER_LEFT);
         if (isArchived) {
-            Label archiveBadge = new Label("ARŞİVLENDİ");
+            Label archiveBadge = new Label("ARŞİV");
             archiveBadge.getStyleClass().add("ml-badge-warning");
             titleRow.getChildren().add(archiveBadge);
         }
 
-        Label permBadge = new Label(permission);
-        permBadge.getStyleClass().add(isOwner ? "ml-badge-accent" : "ml-badge");
+        Label metaLabel = new Label(
+                experiment.getSimulationTypeName()
+                        + "  ·  @" + experiment.getOwnerUsername()
+                        + "  ·  " + permission
+        );
+        metaLabel.getStyleClass().addAll("ml-text-secondary", "ml-mono");
 
-        Label metaLabel = new Label(experiment.getSimulationTypeName() + " • @" + experiment.getOwnerUsername());
-        metaLabel.getStyleClass().add("ml-text-secondary");
-
-        HBox metaRow = new HBox(8, metaLabel, permBadge);
-        metaRow.setAlignment(Pos.CENTER_LEFT);
-
-        VBox titleBlock = new VBox(4, titleRow, metaRow);
+        VBox titleBlock = new VBox(5, titleRow, metaLabel);
         if (experiment.getDescription() != null && !experiment.getDescription().isBlank()) {
             Label descLabel = new Label(experiment.getDescription());
             descLabel.getStyleClass().add("ml-text-secondary");
@@ -183,13 +192,13 @@ public class ExperimentDetailPane extends BorderPane {
 
         if (canRun) {
             runProgress = new ProgressIndicator();
-            runProgress.setPrefSize(20, 20);
+            runProgress.setPrefSize(18, 18);
             runProgress.setVisible(false);
             runProgress.setManaged(false);
 
-            runSimButton = new Button("Çalıştır", UiHelper.icon(Feather.PLAY, 14, "ml-icon-light"));
+            runSimButton = new Button("Simülasyonu Çalıştır", UiHelper.icon(Feather.PLAY, 14, "ml-icon-light"));
             runSimButton.getStyleClass().add("ml-btn-primary");
-            runSimButton.setGraphicTextGap(6);
+            runSimButton.setGraphicTextGap(7);
             runSimButton.setOnAction(e -> actions.onRunSimulation().accept(canEdit));
             actionBox.getChildren().addAll(runProgress, runSimButton);
         }
@@ -202,7 +211,7 @@ public class ExperimentDetailPane extends BorderPane {
         HBox headerBar = new HBox(16, titleBlock, headerSpacer, actionBox);
         headerBar.setAlignment(Pos.TOP_LEFT);
 
-        VBox centerContent = new VBox(14, backButton, headerBar, feedbackLabel, runResultPane);
+        VBox centerContent = new VBox(16, navRow, headerBar, feedbackLabel, runResultPane);
         centerContent.getStyleClass().add("ml-detail-pane");
 
         ScrollPane centerScroll = new ScrollPane(centerContent);
@@ -210,25 +219,44 @@ public class ExperimentDetailPane extends BorderPane {
         centerScroll.getStyleClass().add("ml-scroll-pane");
         setCenter(centerScroll);
 
-        // --- Sağ Sekmeli Inspector Paneli ---
+        // --- Sağ Inspector Paneli ---
+        Label inspectorKicker = new Label("INSPECTOR");
+        inspectorKicker.getStyleClass().add("ml-inspector-kicker");
+
         VBox paramsTabContent = buildParamsInspector(params, canEdit);
         VBox runsTabContent = buildRunsInspector();
 
         Tab paramsTab = new Tab("Parametreler", paramsTabContent);
-        paramsTab.setGraphic(UiHelper.icon(Feather.SLIDERS, 14));
+        paramsTab.setGraphic(UiHelper.icon(Feather.SLIDERS, 13));
 
         Tab runsTab = new Tab("Geçmiş", runsTabContent);
-        runsTab.setGraphic(UiHelper.icon(Feather.CLOCK, 14));
+        runsTab.setGraphic(UiHelper.icon(Feather.CLOCK, 13));
 
         TabPane inspectorTabs = new TabPane(paramsTab, runsTab);
         inspectorTabs.setTabClosingPolicy(TabPane.TabClosingPolicy.UNAVAILABLE);
         inspectorTabs.getStyleClass().add("ml-tabs");
         VBox.setVgrow(inspectorTabs, Priority.ALWAYS);
 
-        VBox inspectorPane = new VBox(inspectorTabs);
+        VBox inspectorPane = new VBox(4, inspectorKicker, inspectorTabs);
         inspectorPane.getStyleClass().add("ml-inspector");
-        inspectorPane.setPrefWidth(330);
+        inspectorPane.setPrefWidth(320);
         setRight(inspectorPane);
+    }
+
+    public void markParametersSaved() {
+        setUnsavedVisible(false);
+    }
+
+    private void setUnsavedVisible(boolean visible) {
+        unsavedLabel.setVisible(visible);
+        unsavedLabel.setManaged(visible);
+    }
+
+    private static String statusDotClass(String status) {
+        if ("COMPLETED".equals(status)) return "ml-dot-completed";
+        if ("FAILED".equals(status)) return "ml-dot-failed";
+        if ("RUNNING".equals(status)) return "ml-dot-running";
+        return "ml-dot-created";
     }
 
     private MenuButton buildMoreMenu(boolean canEdit, boolean isOwner, boolean isArchived) {
@@ -264,7 +292,7 @@ public class ExperimentDetailPane extends BorderPane {
     }
 
     private VBox buildParamsInspector(List<ExperimentParameter> params, boolean canEdit) {
-        VBox listBox = new VBox(14);
+        VBox listBox = new VBox(12);
         listBox.setPadding(new Insets(12, 4, 12, 4));
 
         for (ExperimentParameter param : params) {
@@ -272,14 +300,14 @@ public class ExperimentDetailPane extends BorderPane {
             nameLabel.getStyleClass().add("ml-text-bold");
 
             Label unitLabel = new Label(param.getUnit() != null && !param.getUnit().isBlank() ? param.getUnit() : "");
-            unitLabel.getStyleClass().add("ml-text-muted");
+            unitLabel.getStyleClass().addAll("ml-text-muted", "ml-mono");
 
             Region sp = new Region();
             HBox.setHgrow(sp, Priority.ALWAYS);
 
             TextField valueField = new TextField(String.valueOf(param.getValue()));
             valueField.getStyleClass().add("ml-mono");
-            valueField.setPrefWidth(92);
+            valueField.setPrefWidth(88);
             valueField.setAlignment(Pos.CENTER_RIGHT);
             valueField.setEditable(canEdit);
 
@@ -287,6 +315,7 @@ public class ExperimentDetailPane extends BorderPane {
             topRow.setAlignment(Pos.CENTER_LEFT);
 
             VBox itemBox = new VBox(6, topRow);
+            itemBox.getStyleClass().add("ml-param-row");
 
             Double min = param.getMinValue();
             Double max = param.getMaxValue();
@@ -300,11 +329,13 @@ public class ExperimentDetailPane extends BorderPane {
                     if (!syncing[0]) {
                         syncing[0] = true;
                         valueField.setText(String.format(Locale.US, "%.2f", newV.doubleValue()));
+                        if (canEdit) setUnsavedVisible(true);
                         syncing[0] = false;
                     }
                 });
                 valueField.textProperty().addListener((obs, oldV, newV) -> {
                     if (!syncing[0] && newV != null) {
+                        if (canEdit) setUnsavedVisible(true);
                         try {
                             double parsed = Double.parseDouble(newV.trim().replace(',', '.'));
                             if (parsed >= min && parsed <= max) {
@@ -326,6 +357,9 @@ public class ExperimentDetailPane extends BorderPane {
 
                 itemBox.getChildren().addAll(slider, new HBox(minLbl, rSp, maxLbl));
             } else {
+                if (canEdit) {
+                    valueField.textProperty().addListener((obs, o, n) -> setUnsavedVisible(true));
+                }
                 String range = formatRange(min, max);
                 if (!range.isEmpty()) {
                     Label rangeLabel = new Label(range);
@@ -343,14 +377,14 @@ public class ExperimentDetailPane extends BorderPane {
         paramScroll.getStyleClass().add("ml-scroll-pane");
         VBox.setVgrow(paramScroll, Priority.ALWAYS);
 
-        VBox wrapper = new VBox(10, paramScroll);
+        VBox wrapper = new VBox(8, paramScroll);
         if (canEdit) {
             Button saveBtn = new Button("Parametreleri Kaydet", UiHelper.icon(Feather.SAVE, 14));
             saveBtn.getStyleClass().add("ml-btn-secondary");
             saveBtn.setGraphicTextGap(6);
             saveBtn.setMaxWidth(Double.MAX_VALUE);
             saveBtn.setOnAction(e -> actions.onSaveParameters().run());
-            wrapper.getChildren().add(saveBtn);
+            wrapper.getChildren().addAll(unsavedLabel, saveBtn);
         }
         return wrapper;
     }
@@ -364,7 +398,7 @@ public class ExperimentDetailPane extends BorderPane {
 
         VBox.setVgrow(runListView, Priority.ALWAYS);
         VBox wrapper = new VBox(10, compareBtn, runListView);
-        wrapper.setPadding(new Insets(12, 0, 0, 0));
+        wrapper.setPadding(new Insets(10, 0, 0, 0));
         return wrapper;
     }
 
@@ -398,7 +432,7 @@ public class ExperimentDetailPane extends BorderPane {
     public void setRunningState(boolean running) {
         if (runSimButton != null) {
             runSimButton.setDisable(running);
-            runSimButton.setText(running ? "Çalıştırılıyor..." : "Çalıştır");
+            runSimButton.setText(running ? "Çalıştırılıyor..." : "Simülasyonu Çalıştır");
         }
         if (runProgress != null) {
             runProgress.setVisible(running);
@@ -415,15 +449,9 @@ public class ExperimentDetailPane extends BorderPane {
     }
 
     private String formatRange(Double min, Double max) {
-        if (min != null && max != null) {
-            return "[" + min + " .. " + max + "]";
-        }
-        if (min != null) {
-            return "[>= " + min + "]";
-        }
-        if (max != null) {
-            return "[<= " + max + "]";
-        }
+        if (min != null && max != null) return "[" + min + " .. " + max + "]";
+        if (min != null) return "[>= " + min + "]";
+        if (max != null) return "[<= " + max + "]";
         return "";
     }
 }

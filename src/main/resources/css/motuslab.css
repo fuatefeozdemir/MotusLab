@@ -1,5 +1,5 @@
 /* =========================================
-   MotusLab — Neo-Glass & Workspace Tasarım Sistemi
+   MotusLab — Contemporary Scientific Editorial
    ========================================= */
 
 .root {
@@ -8,7 +8,7 @@
     -ml-burgundy:           #7D0140;
     -ml-navy:               #202D3E;
 
-    /* Destekleyici */
+    /* Destekleyici & Veri */
     -ml-mauve:              #75445F;
     -ml-coral:              #E58B70;
     -ml-amber:              #D7A94F;
@@ -20,8 +20,7 @@
     -ml-bg:                 #F6F0E9;
     -ml-bg-secondary:       #EDE4DC;
     -ml-surface:            #FFFFFF;
-    -ml-surface-glass:      rgba(255, 255, 255, 0.82);
-    -ml-surface-elevated:   rgba(252, 249, 246, 0.88);
+    -ml-surface-elevated:   #FCF9F6;
     -ml-surface-muted:      #F0E8E5;
     -ml-border:             #DDD5D1;
     -ml-border-subtle:      #EAE2DE;
@@ -53,7 +52,7 @@
     -fx-font-family:        "Inter", "Segoe UI", system-ui, sans-serif;
     -fx-font-size:          13px;
     -fx-text-fill:          -ml-text-primary;
-    -fx-background-color:   linear-gradient(to bottom right, #F8F3EC, #EFE6DF 55%, #F4EAEB);
+    -fx-background-color:   -ml-bg;
 
     /* AtlantaFX Override */
     -color-accent-fg:           -ml-magenta;
@@ -93,21 +92,6 @@
 }
 
 /* --- Yerleşim Yüzeyleri --- */
-.ml-topbar {
-    -fx-background-color:   rgba(255, 255, 255, 0.86);
-    -fx-border-color:       transparent transparent -ml-border transparent;
-    -fx-border-width:       0 0 1 0;
-    -fx-padding:            10 20 10 20;
-    -fx-effect:             dropshadow(gaussian, rgba(32, 45, 62, 0.05), 10, 0, 0, 2);
-}
-
-.ml-sidebar {
-    -fx-background-color:   -ml-surface-elevated;
-    -fx-border-color:       transparent -ml-border transparent transparent;
-    -fx-border-width:       0 1 0 0;
-    -fx-padding:            16;
-}
-
 .ml-inspector {
     -fx-background-color:   -ml-surface-elevated;
     -fx-border-color:       transparent transparent transparent -ml-border;
@@ -117,7 +101,7 @@
 
 .ml-detail-pane {
     -fx-background-color:   transparent;
-    -fx-padding:            20 24 24 24;
+    -fx-padding:            22 28 28 28;
 }
 
 .ml-scroll-pane,
@@ -125,44 +109,65 @@
     -fx-background-color:   transparent;
 }
 
-/* --- Neo-Glass Kartlar --- */
+/* --- Kartlar --- */
 .ml-auth-card {
-    -fx-background-color:   rgba(255, 255, 255, 0.88);
-    -fx-border-color:       rgba(255, 255, 255, 0.95);
-    -fx-border-width:       1.5;
-    -fx-border-radius:      16;
-    -fx-background-radius:  16;
+    -fx-background-color:   rgba(255, 255, 255, 0.92);
+    -fx-border-color:       -ml-border;
+    -fx-border-width:       1;
+    -fx-border-radius:      14;
+    -fx-background-radius:  14;
     -fx-padding:            32;
-    -fx-effect:             dropshadow(gaussian, rgba(32, 45, 62, 0.12), 28, 0, 0, 10);
+    -fx-effect:             dropshadow(gaussian, rgba(32, 45, 62, 0.10), 24, 0, 0, 8);
 }
 
 .ml-card {
-    -fx-background-color:   -ml-surface-glass;
-    -fx-border-color:       rgba(221, 213, 209, 0.85);
-    -fx-border-width:       1;
-    -fx-border-radius:      12;
-    -fx-background-radius:  12;
-    -fx-padding:            16;
-    -fx-effect:             dropshadow(gaussian, rgba(32, 45, 62, 0.06), 14, 0, 0, 4);
-}
-
-.ml-metric-card {
-    -fx-background-color:   -ml-surface-glass;
-    -fx-border-color:       rgba(221, 213, 209, 0.85);
-    -fx-border-width:       1;
-    -fx-border-radius:      12;
-    -fx-background-radius:  12;
-    -fx-padding:            14 18 14 18;
-    -fx-effect:             dropshadow(gaussian, rgba(32, 45, 62, 0.05), 10, 0, 0, 3);
-}
-
-.ml-info-box {
-    -fx-background-color:   -ml-surface-glass;
-    -fx-border-color:       -ml-border-subtle;
+    -fx-background-color:   -ml-surface;
+    -fx-border-color:       -ml-border;
     -fx-border-width:       1;
     -fx-border-radius:      10;
     -fx-background-radius:  10;
+    -fx-padding:            16;
+}
+
+.ml-metric-card {
+    -fx-background-color:   -ml-surface;
+    -fx-border-color:       -ml-border;
+    -fx-border-width:       1;
+    -fx-border-radius:      10;
+    -fx-background-radius:  10;
+    -fx-padding:            14 18 14 18;
+}
+
+.ml-info-box {
+    -fx-background-color:   -ml-surface;
+    -fx-border-color:       -ml-border-subtle;
+    -fx-border-width:       1;
+    -fx-border-radius:      8;
+    -fx-background-radius:  8;
     -fx-padding:            14;
+}
+
+.ml-exp-card {
+    -fx-background-color:   -ml-surface;
+    -fx-border-color:       -ml-border;
+    -fx-border-width:       1;
+    -fx-border-radius:      10;
+    -fx-background-radius:  10;
+    -fx-padding:            18;
+    -fx-cursor:             hand;
+}
+
+.ml-exp-card:hover {
+    -fx-border-color:       -ml-navy;
+}
+
+.ml-kpi-card {
+    -fx-background-color:   -ml-surface;
+    -fx-border-color:       -ml-border;
+    -fx-border-width:       1;
+    -fx-border-radius:      10;
+    -fx-background-radius:  10;
+    -fx-padding:            16 20 16 20;
 }
 
 /* --- Tipografi --- */
@@ -180,6 +185,13 @@
 
 .ml-section-title {
     -fx-font-size:          14px;
+    -fx-font-weight:        bold;
+    -fx-text-fill:          -ml-navy;
+}
+
+.ml-kpi-number {
+    -fx-font-family:        "JetBrains Mono", monospace;
+    -fx-font-size:          26px;
     -fx-font-weight:        bold;
     -fx-text-fill:          -ml-navy;
 }
@@ -214,36 +226,36 @@
 .ml-badge {
     -fx-background-color:   -ml-surface-muted;
     -fx-text-fill:          -ml-text-secondary;
-    -fx-background-radius:  20;
-    -fx-padding:            3 10 3 10;
-    -fx-font-size:          11.5px;
+    -fx-background-radius:  6;
+    -fx-padding:            3 8 3 8;
+    -fx-font-size:          11px;
     -fx-font-weight:        bold;
 }
 
 .ml-badge-accent {
-    -fx-background-color:   rgba(215, 16, 97, 0.12);
+    -fx-background-color:   rgba(215, 16, 97, 0.10);
     -fx-text-fill:          -ml-magenta;
-    -fx-background-radius:  20;
-    -fx-padding:            3 10 3 10;
-    -fx-font-size:          11.5px;
+    -fx-background-radius:  6;
+    -fx-padding:            3 8 3 8;
+    -fx-font-size:          11px;
     -fx-font-weight:        bold;
 }
 
 .ml-badge-warning {
-    -fx-background-color:   rgba(215, 169, 79, 0.22);
+    -fx-background-color:   rgba(215, 169, 79, 0.20);
     -fx-text-fill:          -ml-navy;
-    -fx-background-radius:  20;
-    -fx-padding:            3 10 3 10;
-    -fx-font-size:          11.5px;
+    -fx-background-radius:  6;
+    -fx-padding:            3 8 3 8;
+    -fx-font-size:          11px;
     -fx-font-weight:        bold;
 }
 
 .ml-badge-success {
-    -fx-background-color:   rgba(128, 154, 145, 0.20);
+    -fx-background-color:   rgba(128, 154, 145, 0.18);
     -fx-text-fill:          -ml-navy;
-    -fx-background-radius:  20;
-    -fx-padding:            3 10 3 10;
-    -fx-font-size:          11.5px;
+    -fx-background-radius:  6;
+    -fx-padding:            3 8 3 8;
+    -fx-font-size:          11px;
     -fx-font-weight:        bold;
 }
 
@@ -258,28 +270,26 @@
     -fx-font-weight:        bold;
 }
 
-/* --- Modern Butonlar --- */
+/* --- Butonlar --- */
 .ml-btn-primary {
-    -fx-background-color:   linear-gradient(to right, #D71061, #B80C53);
+    -fx-background-color:   -ml-burgundy;
     -fx-text-fill:          #FFFFFF;
     -fx-background-radius:  8;
     -fx-padding:            8 16 8 16;
     -fx-font-weight:        bold;
     -fx-cursor:             hand;
-    -fx-effect:             dropshadow(gaussian, rgba(215, 16, 97, 0.28), 10, 0, 0, 3);
 }
 
 .ml-btn-primary:hover {
-    -fx-background-color:   linear-gradient(to right, #7D0140, #D71061);
+    -fx-background-color:   -ml-magenta;
 }
 
 .ml-btn-primary:disabled {
     -fx-background-color:   -ml-text-disabled;
-    -fx-effect:             none;
 }
 
 .ml-btn-secondary {
-    -fx-background-color:   rgba(255, 255, 255, 0.85);
+    -fx-background-color:   -ml-surface;
     -fx-text-fill:          -ml-text-primary;
     -fx-border-color:       -ml-border;
     -fx-border-width:       1;
@@ -295,7 +305,7 @@
 }
 
 .ml-btn-danger {
-    -fx-background-color:   rgba(255, 255, 255, 0.85);
+    -fx-background-color:   -ml-surface;
     -fx-text-fill:          -ml-danger;
     -fx-border-color:       rgba(125, 1, 64, 0.45);
     -fx-border-width:       1;
@@ -310,20 +320,91 @@
     -fx-text-fill:          #FFFFFF;
 }
 
+.ml-icon-btn,
 .ml-btn-icon {
     -fx-background-color:   transparent;
-    -fx-background-radius:  8;
-    -fx-padding:            7;
+    -fx-background-radius:  6;
+    -fx-padding:            6;
     -fx-cursor:             hand;
 }
 
+.ml-icon-btn:hover,
 .ml-btn-icon:hover {
     -fx-background-color:   -ml-hover;
 }
 
+.ml-back-btn {
+    -fx-background-color:   transparent;
+    -fx-text-fill:          -ml-text-secondary;
+    -fx-padding:            6 10 6 6;
+    -fx-background-radius:  6;
+    -fx-font-weight:        bold;
+    -fx-cursor:             hand;
+}
+
+.ml-back-btn:hover {
+    -fx-background-color:   -ml-hover;
+    -fx-text-fill:          -ml-navy;
+}
+
+/* --- Sol Ana Navigasyon Sidebar --- */
+.ml-nav-sidebar {
+    -fx-background-color:   -ml-surface;
+    -fx-border-color:       transparent -ml-border transparent transparent;
+    -fx-border-width:       0 1 0 0;
+    -fx-padding:            18 12 14 12;
+}
+
+.ml-nav-section-label {
+    -fx-font-family:        "JetBrains Mono", monospace;
+    -fx-font-size:          10.5px;
+    -fx-font-weight:        bold;
+    -fx-text-fill:          -ml-text-muted;
+    -fx-padding:            8 12 4 12;
+}
+
+.ml-nav-item {
+    -fx-background-color:   transparent;
+    -fx-text-fill:          -ml-text-secondary;
+    -fx-alignment:          CENTER_LEFT;
+    -fx-padding:            9 12 9 11;
+    -fx-background-radius:  0 8 8 0;
+    -fx-border-color:       transparent;
+    -fx-border-width:       0 0 0 3;
+    -fx-font-weight:        normal;
+    -fx-cursor:             hand;
+}
+
+.ml-nav-item:hover {
+    -fx-background-color:   -ml-bg;
+    -fx-text-fill:          -ml-navy;
+}
+
+.ml-nav-item-active {
+    -fx-background-color:   rgba(215, 16, 97, 0.06);
+    -fx-text-fill:          -ml-navy;
+    -fx-font-weight:        bold;
+    -fx-border-color:       transparent transparent transparent -ml-magenta;
+    -fx-border-width:       0 0 0 3;
+}
+
+.ml-nav-divider {
+    -fx-background-color:   -ml-border-subtle;
+    -fx-pref-height:        1;
+    -fx-max-height:         1;
+}
+
+.ml-nav-user-box {
+    -fx-background-color:   -ml-bg;
+    -fx-border-color:       -ml-border-subtle;
+    -fx-border-radius:      10;
+    -fx-background-radius:  10;
+    -fx-padding:            10 10 10 12;
+}
+
 /* --- Form Kontrolleri & Slider --- */
 .text-field, .password-field, .combo-box, .text-area {
-    -fx-background-color:   rgba(255, 255, 255, 0.92);
+    -fx-background-color:   -ml-surface;
     -fx-border-color:       -ml-border;
     -fx-border-radius:      8;
     -fx-background-radius:  8;
@@ -336,15 +417,14 @@
 .slider .track {
     -fx-background-color:   -ml-bg-secondary;
     -fx-background-radius:  4;
-    -fx-pref-height:        5;
+    -fx-pref-height:        4;
 }
 
 .slider .thumb {
-    -fx-background-color:   -ml-magenta;
+    -fx-background-color:   -ml-burgundy;
     -fx-background-radius:  10;
     -fx-pref-width:         14;
     -fx-pref-height:        14;
-    -fx-effect:             dropshadow(gaussian, rgba(215, 16, 97, 0.35), 6, 0, 0, 1);
 }
 
 /* --- Sekmeler (TabPane) --- */
@@ -360,38 +440,38 @@
 
 .ml-tabs .tab:selected {
     -fx-border-color:       transparent transparent -ml-magenta transparent;
-    -fx-border-width:       0 0 2.5 0;
+    -fx-border-width:       0 0 2 0;
 }
 
 .ml-tabs .tab:selected .tab-label {
-    -fx-text-fill:          -ml-magenta;
+    -fx-text-fill:          -ml-navy;
     -fx-font-weight:        bold;
 }
 
 /* --- Listeler --- */
 .list-view {
-    -fx-background-color:   rgba(255, 255, 255, 0.72);
+    -fx-background-color:   -ml-surface;
     -fx-border-color:       -ml-border-subtle;
-    -fx-border-radius:      10;
-    -fx-background-radius:  10;
+    -fx-border-radius:      8;
+    -fx-background-radius:  8;
     -fx-padding:            4;
 }
 
 .list-cell {
     -fx-background-color:   transparent;
-    -fx-background-radius:  8;
+    -fx-background-radius:  6;
     -fx-padding:            6 8 6 8;
 }
 
 /* noinspection CssInvalidPseudoSelector */
 .list-cell:filled:hover {
-    -fx-background-color:   -ml-hover;
+    -fx-background-color:   -ml-bg;
 }
 
 /* noinspection CssInvalidPseudoSelector */
 .list-cell:filled:selected,
 .list-cell:filled:selected:hover {
-    -fx-background-color:   -ml-bg-secondary;
+    -fx-background-color:   rgba(125, 1, 64, 0.08);
     -fx-text-fill:          -ml-text-primary;
 }
 
@@ -401,142 +481,34 @@
 
 /* --- Grafikler --- */
 .chart {
-    -fx-background-color:   -ml-surface-glass;
-    -fx-border-color:       rgba(221, 213, 209, 0.85);
-    -fx-border-radius:      12;
-    -fx-background-radius:  12;
+    -fx-background-color:   -ml-surface;
+    -fx-border-color:       -ml-border;
+    -fx-border-radius:      10;
+    -fx-background-radius:  10;
     -fx-padding:            12;
-    -fx-effect:             dropshadow(gaussian, rgba(32, 45, 62, 0.06), 12, 0, 0, 3);
 }
 
 .chart-plot-background {
-    -fx-background-color:   rgba(252, 249, 246, 0.75);
+    -fx-background-color:   #FCFBF9;
+}
+
+.chart-vertical-grid-lines,
+.chart-horizontal-grid-lines {
+    -fx-stroke:             rgba(32, 45, 62, 0.08);
 }
 
 .default-color0.chart-series-line { -fx-stroke: -ml-series-1; -fx-stroke-width: 2.2px; }
-.default-color1.chart-series-line { -fx-stroke: -ml-series-2; -fx-stroke-width: 2.2px; }
-.default-color2.chart-series-line { -fx-stroke: -ml-series-3; -fx-stroke-width: 2.2px; }
-.default-color3.chart-series-line { -fx-stroke: -ml-series-4; -fx-stroke-width: 2.2px; }
-.default-color4.chart-series-line { -fx-stroke: -ml-series-5; -fx-stroke-width: 2.2px; }
-.default-color5.chart-series-line { -fx-stroke: -ml-series-6; -fx-stroke-width: 2.2px; }
-.default-color6.chart-series-line { -fx-stroke: -ml-series-7; -fx-stroke-width: 2.2px; }
-.default-color7.chart-series-line { -fx-stroke: -ml-series-8; -fx-stroke-width: 2.2px; }
-
-/* --- Güncellenmiş Ana Buton (Burgundy) --- */
-.ml-btn-primary {
-    -fx-background-color:   #7D0140;
-    -fx-text-fill:          #FFFFFF;
-    -fx-background-radius:  8;
-    -fx-padding:            8 16 8 16;
-    -fx-font-weight:        bold;
-    -fx-cursor:             hand;
-    -fx-effect:             dropshadow(gaussian, rgba(125, 1, 64, 0.22), 8, 0, 0, 2);
-}
-
-.ml-btn-primary:hover {
-    -fx-background-color:   #D71061;
-}
-
-/* --- Sol Ana Navigasyon Sidebar --- */
-.ml-nav-sidebar {
-    -fx-background-color:   rgba(255, 255, 255, 0.90);
-    -fx-border-color:       transparent -ml-border transparent transparent;
-    -fx-border-width:       0 1 0 0;
-    -fx-padding:            18 12 16 12;
-}
-
-.ml-nav-item {
-    -fx-background-color:   transparent;
-    -fx-text-fill:          -ml-text-secondary;
-    -fx-alignment:          CENTER_LEFT;
-    -fx-padding:            10 12 10 12;
-    -fx-background-radius:  8;
-    -fx-font-weight:        bold;
-    -fx-cursor:             hand;
-}
-
-.ml-nav-item:hover {
-    -fx-background-color:   -ml-hover;
-    -fx-text-fill:          -ml-navy;
-}
-
-.ml-nav-item-active {
-    -fx-background-color:   rgba(215, 16, 97, 0.10);
-    -fx-text-fill:          -ml-magenta;
-}
-
-.ml-nav-user-box {
-    -fx-background-color:   -ml-bg;
-    -fx-border-color:       -ml-border-subtle;
-    -fx-border-radius:      10;
-    -fx-background-radius:  10;
-    -fx-padding:            10 12 10 12;
-}
-
-/* --- Kütüphane ve Genel Bakış Kartları --- */
-.ml-exp-card {
-    -fx-background-color:   -ml-surface;
-    -fx-border-color:       -ml-border;
-    -fx-border-width:       1;
-    -fx-border-radius:      12;
-    -fx-background-radius:  12;
-    -fx-padding:            16;
-    -fx-cursor:             hand;
-    -fx-effect:             dropshadow(gaussian, rgba(32, 45, 62, 0.04), 8, 0, 0, 2);
-}
-
-.ml-exp-card:hover {
-    -fx-border-color:       -ml-magenta;
-    -fx-effect:             dropshadow(gaussian, rgba(215, 16, 97, 0.12), 14, 0, 0, 4);
-}
-
-.ml-kpi-card {
-    -fx-background-color:   -ml-surface;
-    -fx-border-color:       -ml-border;
-    -fx-border-width:       1;
-    -fx-border-radius:      12;
-    -fx-background-radius:  12;
-    -fx-padding:            16 20 16 20;
-}
-
-.ml-kpi-number {
-    -fx-font-family:        "JetBrains Mono", monospace;
-    -fx-font-size:          26px;
-    -fx-font-weight:        bold;
-    -fx-text-fill:          -ml-navy;
-}
-
-.ml-back-btn {
-    -fx-background-color:   transparent;
-    -fx-text-fill:          -ml-text-secondary;
-    -fx-padding:            6 10 6 6;
-    -fx-background-radius:  8;
-    -fx-font-weight:        bold;
-    -fx-cursor:             hand;
-}
-
-.ml-back-btn:hover {
-    -fx-background-color:   -ml-hover;
-    -fx-text-fill:          -ml-navy;
-}
+.default-color1.chart-series-line { -fx-stroke: -ml-series-2; -fx-stroke-width: 2.0px; }
+.default-color2.chart-series-line { -fx-stroke: -ml-series-3; -fx-stroke-width: 2.0px; }
+.default-color3.chart-series-line { -fx-stroke: -ml-series-4; -fx-stroke-width: 2.0px; }
+.default-color4.chart-series-line { -fx-stroke: -ml-series-5; -fx-stroke-width: 2.0px; }
+.default-color5.chart-series-line { -fx-stroke: -ml-series-6; -fx-stroke-width: 2.0px; }
+.default-color6.chart-series-line { -fx-stroke: -ml-series-7; -fx-stroke-width: 2.0px; }
+.default-color7.chart-series-line { -fx-stroke: -ml-series-8; -fx-stroke-width: 2.0px; }
 
 /* --- Auth Ekranı --- */
 .ml-auth-root {
     -fx-background-color:   linear-gradient(to bottom right, #FCF9F5, #F6F0E9 55%, #EDE3DA);
-}
-
-.ml-auth-header {
-    -fx-background-color:   rgba(255, 255, 255, 0.55);
-    -fx-border-color:       transparent transparent rgba(221, 213, 209, 0.8) transparent;
-    -fx-border-width:       0 0 1 0;
-    -fx-padding:            14 24 14 24;
-}
-
-.ml-auth-kicker {
-    -fx-font-family:        "JetBrains Mono", monospace;
-    -fx-font-size:          11.5px;
-    -fx-font-weight:        bold;
-    -fx-text-fill:          -ml-text-secondary;
 }
 
 .ml-auth-grid-line {
@@ -544,7 +516,7 @@
 }
 
 .ml-input-group {
-    -fx-background-color:   rgba(255, 255, 255, 0.94);
+    -fx-background-color:   -ml-surface;
     -fx-border-color:       -ml-border;
     -fx-border-width:       1;
     -fx-border-radius:      8;
@@ -553,9 +525,8 @@
     -fx-min-height:         40;
 }
 
-.ml-input-group:focused-within {
+.ml-input-group-focused {
     -fx-border-color:       -ml-magenta;
-    -fx-effect:             dropshadow(gaussian, rgba(215, 16, 97, 0.14), 8, 0, 0, 0);
 }
 
 .ml-input-bare,
@@ -578,12 +549,6 @@
     -fx-background-color:   -ml-hover;
 }
 
-.ml-auth-footer-meta {
-    -fx-font-family:        "JetBrains Mono", monospace;
-    -fx-font-size:          11px;
-    -fx-text-fill:          -ml-text-muted;
-}
-
 /* --- Özel Pencere Barı (UNDECORATED) --- */
 .ml-window-frame {
     -fx-border-color:       -ml-border;
@@ -591,7 +556,7 @@
 }
 
 .ml-titlebar {
-    -fx-background-color:   rgba(255, 255, 255, 0.94);
+    -fx-background-color:   -ml-surface;
     -fx-border-color:       transparent transparent -ml-border-subtle transparent;
     -fx-border-width:       0 0 1 0;
     -fx-min-height:         34;
@@ -623,4 +588,160 @@
 
 .ml-win-btn-close:hover .ml-icon {
     -fx-icon-color:         #FFFFFF;
+}
+
+/* --- Workspace, Inspector ve Grafik Kartları --- */
+.ml-breadcrumb {
+    -fx-font-family:        "JetBrains Mono", monospace;
+    -fx-font-size:          11px;
+    -fx-font-weight:        bold;
+    -fx-text-fill:          -ml-text-muted;
+}
+
+.ml-inspector-kicker {
+    -fx-font-family:        "JetBrains Mono", monospace;
+    -fx-font-size:          10.5px;
+    -fx-font-weight:        bold;
+    -fx-text-fill:          -ml-text-muted;
+    -fx-padding:            0 0 6 2;
+}
+
+.ml-param-row {
+    -fx-border-color:       transparent transparent -ml-border-subtle transparent;
+    -fx-border-width:       0 0 1 0;
+    -fx-padding:            0 0 12 0;
+}
+
+.ml-unsaved-indicator {
+    -fx-font-size:          11.5px;
+    -fx-font-weight:        bold;
+    -fx-text-fill:          -ml-magenta;
+}
+
+.ml-status-dot {
+    -fx-min-width:          8;
+    -fx-min-height:         8;
+    -fx-max-width:          8;
+    -fx-max-height:         8;
+    -fx-background-radius:  8;
+}
+
+.ml-dot-completed { -fx-background-color: -ml-eucalyptus; }
+.ml-dot-failed    { -fx-background-color: -ml-burgundy; }
+.ml-dot-running   { -fx-background-color: -ml-magenta; }
+.ml-dot-created   { -fx-background-color: -ml-amber; }
+
+.ml-chart-card {
+    -fx-background-color:   -ml-surface;
+    -fx-border-color:       -ml-border;
+    -fx-border-width:       1;
+    -fx-border-radius:      10;
+    -fx-background-radius:  10;
+    -fx-padding:            16 18 14 18;
+}
+
+.ml-chart-card .chart {
+    -fx-background-color:   transparent;
+    -fx-border-color:       transparent;
+    -fx-padding:            4 0 0 0;
+}
+
+.ml-coord-readout {
+    -fx-font-family:        "JetBrains Mono", monospace;
+    -fx-font-size:          11.5px;
+    -fx-text-fill:          -ml-text-secondary;
+    -fx-background-color:   -ml-bg;
+    -fx-background-radius:  6;
+    -fx-padding:            3 8 3 8;
+}
+
+/* --- Editoryal Genel Bakış & Kütüphane --- */
+.ml-editorial-kicker {
+    -fx-font-family:        "JetBrains Mono", monospace;
+    -fx-font-size:          11px;
+    -fx-font-weight:        bold;
+    -fx-text-fill:          -ml-text-muted;
+}
+
+.ml-editorial-title {
+    -fx-font-size:          28px;
+    -fx-font-weight:        bold;
+    -fx-text-fill:          -ml-navy;
+}
+
+.ml-kpi-card-primary {
+    -fx-background-color:   -ml-surface;
+    -fx-border-color:       -ml-border;
+    -fx-border-width:       1;
+    -fx-border-radius:      10;
+    -fx-background-radius:  10;
+    -fx-padding:            20 24 20 24;
+}
+
+.ml-kpi-number-lg {
+    -fx-font-family:        "JetBrains Mono", monospace;
+    -fx-font-size:          36px;
+    -fx-font-weight:        bold;
+    -fx-text-fill:          -ml-navy;
+}
+
+.ml-editorial-list {
+    -fx-background-color:   -ml-surface;
+    -fx-border-color:       -ml-border;
+    -fx-border-width:       1;
+    -fx-border-radius:      10;
+    -fx-background-radius:  10;
+}
+
+.ml-editorial-row {
+    -fx-padding:            14 18 14 18;
+    -fx-border-color:       transparent transparent -ml-border-subtle transparent;
+    -fx-border-width:       0 0 1 0;
+    -fx-cursor:             hand;
+}
+
+.ml-editorial-row:hover {
+    -fx-background-color:   -ml-bg;
+}
+
+.ml-card-meta-label {
+    -fx-font-family:        "JetBrains Mono", monospace;
+    -fx-font-size:          10px;
+    -fx-font-weight:        bold;
+    -fx-text-fill:          -ml-text-muted;
+}
+
+.ml-card-divider {
+    -fx-background-color:   -ml-border-subtle;
+    -fx-pref-height:        1;
+    -fx-max-height:         1;
+}
+
+/* --- Karşılaştırma Seri Noktaları & Tablo --- */
+.ml-series-dot-a {
+    -fx-background-color:   -ml-series-1;
+    -fx-min-width:          9;
+    -fx-min-height:         9;
+    -fx-max-width:          9;
+    -fx-max-height:         9;
+    -fx-background-radius:  9;
+}
+
+.ml-series-dot-b {
+    -fx-background-color:   -ml-series-2;
+    -fx-min-width:          9;
+    -fx-min-height:         9;
+    -fx-max-width:          9;
+    -fx-max-height:         9;
+    -fx-background-radius:  9;
+}
+
+.ml-diff-pill {
+    -fx-font-family:        "JetBrains Mono", monospace;
+    -fx-font-size:          12px;
+    -fx-font-weight:        bold;
+    -fx-text-fill:          -ml-navy;
+    -fx-background-color:   -ml-bg;
+    -fx-background-radius:  6;
+    -fx-padding:            2 7 2 7;
 }

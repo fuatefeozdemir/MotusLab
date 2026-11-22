@@ -7,6 +7,7 @@ import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.Tooltip;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
@@ -37,36 +38,45 @@ public class NavSidebar extends VBox {
     private final Map<Section, FontIcon> navIcons = new EnumMap<>(Section.class);
 
     public NavSidebar(User currentUser, Consumer<Section> onNavigate, Runnable onLogout) {
-        super(6);
+        super(4);
         getStyleClass().add("ml-nav-sidebar");
-        setPrefWidth(224);
+        setPrefWidth(226);
 
-        Node brandNode = createBrandNode();
-        VBox brandBox = new VBox(brandNode);
-        brandBox.setPadding(new Insets(4, 8, 18, 8));
+        VBox brandBox = new VBox(createBrandNode());
+        brandBox.setPadding(new Insets(4, 8, 16, 10));
 
-        String managementLabel = currentUser.isAdmin() ? "Yönetim" : "Profil";
-        Feather managementIcon = currentUser.isAdmin() ? Feather.SHIELD : Feather.USER;
+        Label workspaceLabel = new Label("ÇALIŞMA ALANI");
+        workspaceLabel.getStyleClass().add("ml-nav-section-label");
 
         addNavButton(Section.OVERVIEW, "Genel Bakış", Feather.HOME, onNavigate);
-        addNavButton(Section.EXPERIMENTS, "Deneylerim", Feather.LAYERS, onNavigate);
+        addNavButton(Section.EXPERIMENTS, "Deneyler", Feather.LAYERS, onNavigate);
         addNavButton(Section.COMPARISON, "Karşılaştırma", Feather.GIT_MERGE, onNavigate);
         addNavButton(Section.ARCHIVE, "Arşiv", Feather.ARCHIVE, onNavigate);
-        addNavButton(Section.MANAGEMENT, managementLabel, managementIcon, onNavigate);
 
         Region spacer = new Region();
         VBox.setVgrow(spacer, Priority.ALWAYS);
 
-        VBox userBox = buildUserFooter(currentUser, onLogout);
+        Region divider = new Region();
+        divider.getStyleClass().add("ml-nav-divider");
+        VBox.setMargin(divider, new Insets(8, 4, 8, 4));
 
-        getChildren().add(brandBox);
+        String managementLabel = currentUser.isAdmin() ? "Yönetim" : "Profil";
+        Feather managementIcon = currentUser.isAdmin() ? Feather.SHIELD : Feather.USER;
+        addNavButton(Section.MANAGEMENT, managementLabel, managementIcon, onNavigate);
+
+        HBox userBox = buildUserFooter(currentUser, onLogout);
+        VBox.setMargin(userBox, new Insets(8, 0, 0, 0));
+
         getChildren().addAll(
+                brandBox,
+                workspaceLabel,
                 navButtons.get(Section.OVERVIEW),
                 navButtons.get(Section.EXPERIMENTS),
                 navButtons.get(Section.COMPARISON),
                 navButtons.get(Section.ARCHIVE),
-                navButtons.get(Section.MANAGEMENT),
                 spacer,
+                divider,
+                navButtons.get(Section.MANAGEMENT),
                 userBox
         );
     }
@@ -87,7 +97,7 @@ public class NavSidebar extends VBox {
     }
 
     private void addNavButton(Section section, String text, Feather feather, Consumer<Section> onNavigate) {
-        FontIcon icon = UiHelper.icon(feather, 16);
+        FontIcon icon = UiHelper.icon(feather, 15);
         Button btn = new Button(text, icon);
         btn.getStyleClass().add("ml-nav-item");
         btn.setGraphicTextGap(10);
@@ -98,23 +108,29 @@ public class NavSidebar extends VBox {
         navIcons.put(section, icon);
     }
 
-    private VBox buildUserFooter(User user, Runnable onLogout) {
-        Label usernameLbl = new Label("@" + user.getUsername());
-        usernameLbl.getStyleClass().add("ml-text-bold");
+    private HBox buildUserFooter(User user, Runnable onLogout) {
+        String displayName = (user.getFullName() != null && !user.getFullName().isBlank())
+                ? user.getFullName()
+                : "@" + user.getUsername();
 
-        Label roleBadge = new Label(user.getRoleName());
-        roleBadge.getStyleClass().add(user.isAdmin() ? "ml-badge-accent" : "ml-badge");
+        Label nameLbl = new Label(displayName);
+        nameLbl.getStyleClass().add("ml-text-bold");
+        nameLbl.setMaxWidth(135);
 
-        HBox userRow = new HBox(8, usernameLbl, roleBadge);
-        userRow.setAlignment(Pos.CENTER_LEFT);
+        Label roleLbl = new Label("@" + user.getUsername() + " · " + user.getRoleName());
+        roleLbl.getStyleClass().addAll("ml-text-muted", "ml-mono");
+        roleLbl.setMaxWidth(135);
 
-        Button logoutBtn = new Button("Çıkış Yap", UiHelper.icon(Feather.LOG_OUT, 14));
-        logoutBtn.getStyleClass().add("ml-btn-secondary");
-        logoutBtn.setGraphicTextGap(6);
-        logoutBtn.setMaxWidth(Double.MAX_VALUE);
+        VBox info = new VBox(2, nameLbl, roleLbl);
+        HBox.setHgrow(info, Priority.ALWAYS);
+
+        Button logoutBtn = new Button("", UiHelper.icon(Feather.LOG_OUT, 14));
+        logoutBtn.getStyleClass().add("ml-icon-btn");
+        logoutBtn.setTooltip(new Tooltip("Çıkış Yap"));
         logoutBtn.setOnAction(e -> onLogout.run());
 
-        VBox box = new VBox(10, userRow, logoutBtn);
+        HBox box = new HBox(8, info, logoutBtn);
+        box.setAlignment(Pos.CENTER_LEFT);
         box.getStyleClass().add("ml-nav-user-box");
         return box;
     }
@@ -124,7 +140,7 @@ public class NavSidebar extends VBox {
             if (is != null) {
                 ImageView logoView = new ImageView(new Image(is));
                 logoView.setPreserveRatio(true);
-                logoView.setFitHeight(30);
+                logoView.setFitHeight(32);
                 logoView.setSmooth(true);
                 return logoView;
             }

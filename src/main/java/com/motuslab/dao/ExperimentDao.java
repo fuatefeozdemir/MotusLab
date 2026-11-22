@@ -20,10 +20,18 @@ public class ExperimentDao {
     private static final String BASE_SELECT = """
             SELECT e.id, e.owner_id, u.username AS owner_username,
                    e.simulation_type_id, st.code AS sim_code, st.name AS sim_name,
-                   e.title, e.description, e.is_archived, e.created_at, e.updated_at
+                   e.title, e.description, e.is_archived, e.created_at, e.updated_at,
+                   COALESCE(rs.run_count, 0) AS run_count,
+                   COALESCE(rs.last_run_number, 0) AS last_run_number
             FROM experiments e
             JOIN users u ON u.id = e.owner_id
             JOIN simulation_types st ON st.id = e.simulation_type_id
+            LEFT JOIN LATERAL (
+                SELECT COUNT(*)::int AS run_count,
+                       COALESCE(MAX(sr.run_number), 0)::int AS last_run_number
+                FROM simulation_runs sr
+                WHERE sr.experiment_id = e.id
+            ) rs ON true
             """;
 
     public List<Experiment> findAccessibleByUser(int userId) {
@@ -253,6 +261,8 @@ public class ExperimentDao {
         exp.setArchived(rs.getBoolean("is_archived"));
         exp.setCreatedAt(rs.getObject("created_at", OffsetDateTime.class));
         exp.setUpdatedAt(rs.getObject("updated_at", OffsetDateTime.class));
+        exp.setRunCount(rs.getInt("run_count"));
+        exp.setLastRunNumber(rs.getInt("last_run_number"));
         return exp;
     }
 

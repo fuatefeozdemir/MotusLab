@@ -17,6 +17,7 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import org.kordamp.ikonli.feather.Feather;
 
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -24,16 +25,20 @@ import java.util.function.Consumer;
 
 public class ExperimentLibraryView extends ScrollPane {
 
+    private static final Locale TR = Locale.of("tr", "TR");
+    private static final DateTimeFormatter CARD_DATE_FMT = DateTimeFormatter.ofPattern("d MMM yyyy", TR);
+
     private final User currentUser;
     private final boolean archivedMode;
     private final Consumer<Experiment> onOpenExperiment;
 
     private List<Experiment> allExperiments = List.of();
 
+    private final Label countLabel = new Label("0 deney");
     private final TextField searchField = new TextField();
     private final ComboBox<String> ownershipFilterBox = new ComboBox<>();
     private final ComboBox<String> typeFilterBox = new ComboBox<>();
-    private final FlowPane cardsPane = new FlowPane(14, 14);
+    private final FlowPane cardsPane = new FlowPane(16, 16);
 
     public ExperimentLibraryView(
             User currentUser,
@@ -48,32 +53,20 @@ public class ExperimentLibraryView extends ScrollPane {
         setFitToWidth(true);
         getStyleClass().add("ml-scroll-pane");
 
-        Label title = new Label(archivedMode ? "Arşivlenen Deneyler" : "Deneylerim");
+        // --- Tek Satırlık Kompakt Toolbar ---
+        Label title = new Label(archivedMode ? "Arşiv" : "Deneyler");
         title.getStyleClass().add("ml-page-title");
 
-        Label subtitle = new Label(archivedMode
-                ? "Salt okunur olarak saklanan tamamlanmış deneyler."
-                : "Tüm aktif fizik deneylerinizi arayın, filtreleyin ve çalışma alanında açın.");
-        subtitle.getStyleClass().add("ml-text-secondary");
+        countLabel.getStyleClass().addAll("ml-mono", "ml-text-muted");
 
-        VBox titleBox = new VBox(4, title, subtitle);
+        HBox titleGroup = new HBox(10, title, countLabel);
+        titleGroup.setAlignment(Pos.BASELINE_LEFT);
 
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
-        HBox headerRow = new HBox(12, titleBox, spacer);
-        headerRow.setAlignment(Pos.CENTER_LEFT);
-
-        if (!archivedMode && onNewExperiment != null) {
-            Button newBtn = new Button("Yeni Deney", UiHelper.icon(Feather.PLUS, 15, "ml-icon-light"));
-            newBtn.getStyleClass().add("ml-btn-primary");
-            newBtn.setGraphicTextGap(6);
-            newBtn.setOnAction(e -> onNewExperiment.run());
-            headerRow.getChildren().add(newBtn);
-        }
-
-        searchField.setPromptText("Başlık, açıklama veya sahip ara...");
-        searchField.setPrefWidth(280);
+        searchField.setPromptText("Ara...");
+        searchField.setPrefWidth(210);
         searchField.textProperty().addListener((obs, o, n) -> renderCards());
 
         ownershipFilterBox.setItems(FXCollections.observableArrayList("Tümü", "Benim", "Paylaşılan"));
@@ -84,10 +77,18 @@ public class ExperimentLibraryView extends ScrollPane {
         typeFilterBox.getSelectionModel().selectFirst();
         typeFilterBox.valueProperty().addListener((obs, o, n) -> renderCards());
 
-        HBox filterBar = new HBox(10, searchField, ownershipFilterBox, typeFilterBox);
-        filterBar.setAlignment(Pos.CENTER_LEFT);
+        HBox toolbar = new HBox(10, titleGroup, spacer, searchField, ownershipFilterBox, typeFilterBox);
+        toolbar.setAlignment(Pos.CENTER_LEFT);
 
-        VBox content = new VBox(18, headerRow, filterBar, cardsPane);
+        if (!archivedMode && onNewExperiment != null) {
+            Button newBtn = new Button("Yeni Deney", UiHelper.icon(Feather.PLUS, 14, "ml-icon-light"));
+            newBtn.getStyleClass().add("ml-btn-primary");
+            newBtn.setGraphicTextGap(6);
+            newBtn.setOnAction(e -> onNewExperiment.run());
+            toolbar.getChildren().add(newBtn);
+        }
+
+        VBox content = new VBox(20, toolbar, cardsPane);
         content.getStyleClass().add("ml-detail-pane");
         setContent(content);
     }
@@ -138,6 +139,8 @@ public class ExperimentLibraryView extends ScrollPane {
                 })
                 .toList();
 
+        countLabel.setText(filtered.size() + " deney");
+
         if (filtered.isEmpty()) {
             Label empty = new Label(archivedMode
                     ? "Arşivlenmiş deney bulunamadı."
@@ -153,20 +156,19 @@ public class ExperimentLibraryView extends ScrollPane {
     }
 
     public static VBox buildExperimentCard(Experiment exp, User currentUser, Consumer<Experiment> onOpen) {
-        Feather typeIcon = "PROJECTILE_2D".equals(exp.getSimulationTypeCode())
-                ? Feather.CROSSHAIR
-                : Feather.ACTIVITY;
+        Label typeLbl = new Label(exp.getSimulationTypeName().toUpperCase(TR));
+        typeLbl.getStyleClass().add("ml-card-meta-label");
 
-        Label typeBadge = new Label(exp.getSimulationTypeName());
-        typeBadge.getStyleClass().add("ml-badge-accent");
+        Region topSp = new Region();
+        HBox.setHgrow(topSp, Priority.ALWAYS);
 
-        Region sp = new Region();
-        HBox.setHgrow(sp, Priority.ALWAYS);
+        String runBadgeText = exp.getLastRunNumber() > 0
+                ? String.format(Locale.US, "RUN #%02d", exp.getLastRunNumber())
+                : "YENİ";
+        Label runLbl = new Label(runBadgeText);
+        runLbl.getStyleClass().addAll("ml-mono", "ml-text-muted");
 
-        Label statusBadge = new Label(exp.isArchived() ? "Arşiv" : "Aktif");
-        statusBadge.getStyleClass().add(exp.isArchived() ? "ml-badge-warning" : "ml-badge-success");
-
-        HBox topRow = new HBox(8, UiHelper.icon(typeIcon, 16, "ml-icon-accent"), typeBadge, sp, statusBadge);
+        HBox topRow = new HBox(8, typeLbl, topSp, runLbl);
         topRow.setAlignment(Pos.CENTER_LEFT);
 
         Label title = new Label(exp.getTitle());
@@ -179,30 +181,42 @@ public class ExperimentLibraryView extends ScrollPane {
         Label desc = new Label(descText);
         desc.getStyleClass().add("ml-text-secondary");
         desc.setWrapText(true);
-        desc.setMaxHeight(42);
-
-        String ownerText = exp.getOwnerId() == currentUser.getId()
-                ? "Sahip: Ben"
-                : "Paylaşan: @" + exp.getOwnerUsername();
-        Label ownerLbl = new Label(ownerText);
-        ownerLbl.getStyleClass().add("ml-text-muted");
-
-        Region fSp = new Region();
-        HBox.setHgrow(fSp, Priority.ALWAYS);
-
-        Label openHint = new Label("Aç →");
-        openHint.getStyleClass().add("ml-text-bold");
-
-        HBox footer = new HBox(8, ownerLbl, fSp, openHint);
-        footer.setAlignment(Pos.CENTER_LEFT);
+        desc.setMaxHeight(40);
 
         Region vSp = new Region();
         VBox.setVgrow(vSp, Priority.ALWAYS);
 
-        VBox card = new VBox(10, topRow, title, desc, vSp, footer);
+        Region divider = new Region();
+        divider.getStyleClass().add("ml-card-divider");
+
+        String dateVal = exp.getUpdatedAt() != null ? exp.getUpdatedAt().format(CARD_DATE_FMT) : "-";
+        VBox dateCol = new VBox(2, metaLabel("SON GÜNCELLEME"), monoValue(dateVal));
+
+        String countVal = String.format(Locale.US, "%02d", exp.getRunCount());
+        VBox runsCol = new VBox(2, metaLabel("ÇALIŞTIRMA"), monoValue(countVal));
+
+        Region fSp = new Region();
+        HBox.setHgrow(fSp, Priority.ALWAYS);
+
+        HBox footer = new HBox(18, dateCol, runsCol, fSp, UiHelper.icon(Feather.ARROW_RIGHT, 14));
+        footer.setAlignment(Pos.BOTTOM_LEFT);
+
+        VBox card = new VBox(10, topRow, title, desc, vSp, divider, footer);
         card.getStyleClass().add("ml-exp-card");
-        card.setPrefSize(295, 168);
+        card.setPrefSize(305, 184);
         card.setOnMouseClicked(e -> onOpen.accept(exp));
         return card;
+    }
+
+    private static Label metaLabel(String text) {
+        Label l = new Label(text);
+        l.getStyleClass().add("ml-card-meta-label");
+        return l;
+    }
+
+    private static Label monoValue(String text) {
+        Label l = new Label(text);
+        l.getStyleClass().addAll("ml-mono", "ml-text-bold");
+        return l;
     }
 }
